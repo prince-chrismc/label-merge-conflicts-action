@@ -1,11 +1,24 @@
-name: 'Your name here'
-description: 'Provide a description here'
-author: 'Your name or organization here'
+name: "Label Merge Conflicts"
+description: 'Github Action to automatically label PRs with a "conflict" label'
+author: "prince-chrismc"
+branding:
+  icon: "alert-octagon"
+  color: "gray-dark"
 inputs:
-  milliseconds: # change this
+  conflict_label_name:
+    description: "label name used to marked PRs with merge conflicts"
     required: true
-    description: 'input description here'
-    default: 'default value if applicable'
+  github_token:
+    description: "Github token / secret"
+    required: true
+  max_retries:
+    description: "number of times to retry on a failed mergable check"
+    required: false
+    default: "5"
+  wait_ms:
+    description: "miliseconds between retries"
+    required: false
+    default: "5000"
 runs:
-  using: 'node12'
-  main: 'dist/index.js'
+  using: "node12"
+  main: "dist/index.js"
