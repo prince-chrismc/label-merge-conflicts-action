@@ -1,24 +1,24 @@
-name: 'build-test'
+name: CI
 on: # rebuild any PRs and main branch changes
   pull_request:
   push:
     branches:
       - main
-      - 'releases/*'
+      - "releases/*"
 
 jobs:
   build: # make sure build/ci work properly
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - run: |
-          npm install
-      - run: |
-          npm run all
+      - run: yarn install
+      - run: yarn all
+
   test: # make sure the action works on a clean machine without building
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
       - uses: ./
         with:
-          milliseconds: 1000
+          conflict_label_name: "has conflict"
+          github_token: ${{ secrets.GITHUB_TOKEN }}
