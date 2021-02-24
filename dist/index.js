@@ -53,7 +53,7 @@ function run() {
             const waitMs = parseInt(core.getInput('wait_ms'), 10);
             core.debug(`maxRetries=${maxRetries}; waitMs=${waitMs}`);
             // Get the label to use
-            const conflictLabel = findConflictLabel(yield queries_1.getLabels(octokit, github.context, conflictLabelName), conflictLabelName);
+            const conflictLabel = util_1.findConflictLabel(yield queries_1.getLabels(octokit, github.context, conflictLabelName), conflictLabelName);
             let pullRequests;
             // fetch PRs up to $maxRetries times
             // multiple fetches are necessary because Github computes the 'mergeable' status asynchronously, on request,
@@ -101,14 +101,6 @@ function run() {
             core.setFailed(error.message);
         }
     });
-}
-function findConflictLabel(labelData, conflictLabelName) {
-    for (const label of labelData.repository.labels.edges) {
-        if (label.node.name === conflictLabelName) {
-            return label;
-        }
-    }
-    core.setFailed(`"${conflictLabelName}" label not found in your repository!`);
 }
 run();
 
@@ -209,6 +201,9 @@ const getPullRequestPages = (octokit, context, cursor) => __awaiter(void 0, void
       }
     }`;
     }
+    core.startGroup('getPullRequests');
+    core.info(query);
+    core.endGroup();
     return octokit.graphql(query, {
         headers: { Accept: 'application/vnd.github.ocelot-preview+json' }
     });
@@ -222,6 +217,9 @@ const getPullRequests = (octokit, context) => __awaiter(void 0, void 0, void 0, 
     while (hasNextPage) {
         try {
             pullrequestData = yield getPullRequestPages(octokit, context, cursor);
+            core.startGroup('getPullRequests -- Result');
+            core.info(pullrequestData);
+            core.endGroup();
         }
         catch (error) {
             core.setFailed(`getPullRequests request failed: ${error}`);
@@ -233,6 +231,7 @@ const getPullRequests = (octokit, context) => __awaiter(void 0, void 0, void 0, 
         else {
             pullrequests = pullrequests.concat(pullrequestData.repository.pullRequests.edges);
             cursor = pullrequestData.repository.pullRequests.pageInfo.endCursor;
+            core.info(`endCursor = ${cursor}`);
             hasNextPage = pullrequestData.repository.pullRequests.pageInfo.hasNextPage;
         }
     }
@@ -291,7 +290,7 @@ exports.removeLabelsFromLabelable = removeLabelsFromLabelable;
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.isAlreadyLabeled = exports.getPullrequestsWithoutMergeableStatus = exports.getPullrequestsWithoutConflictingStatus = exports.getPullrequestsWithoutMergeStatus = void 0;
+exports.findConflictLabel = exports.isAlreadyLabeled = exports.getPullrequestsWithoutMergeableStatus = exports.getPullrequestsWithoutConflictingStatus = exports.getPullrequestsWithoutMergeStatus = void 0;
 function getPullrequestsWithoutMergeStatus(pullrequests) {
     return pullrequests.filter((pullrequest) => {
         return pullrequest.node.mergeable === 'UNKNOWN';
@@ -316,6 +315,15 @@ function isAlreadyLabeled(pullrequest, label) {
     });
 }
 exports.isAlreadyLabeled = isAlreadyLabeled;
+function findConflictLabel(labelData, conflictLabelName) {
+    for (const label of labelData.repository.labels.edges) {
+        if (label.node.name === conflictLabelName) {
+            return label;
+        }
+    }
+    throw new Error(`"${conflictLabelName}" label not found in your repository!`);
+}
+exports.findConflictLabel = findConflictLabel;
 
 
 /***/ }),

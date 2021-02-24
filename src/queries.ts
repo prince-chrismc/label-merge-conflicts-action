@@ -61,6 +61,9 @@ const getPullRequestPages = async (octokit: InstanceType<typeof GitHub>, context
     }`
   }
 
+  core.startGroup('getPullRequests')
+  core.info(query)
+  core.endGroup()
   return octokit.graphql(query, {
     headers: {Accept: 'application/vnd.github.ocelot-preview+json'}
   })
@@ -79,6 +82,9 @@ export const getPullRequests = async (
   while (hasNextPage) {
     try {
       pullrequestData = await getPullRequestPages(octokit, context, cursor)
+      core.startGroup('getPullRequests -- Result')
+      core.info(pullrequestData)
+      core.endGroup()
     } catch (error) {
       core.setFailed(`getPullRequests request failed: ${error}`)
     }
@@ -90,6 +96,7 @@ export const getPullRequests = async (
       pullrequests = pullrequests.concat(pullrequestData.repository.pullRequests.edges)
 
       cursor = pullrequestData.repository.pullRequests.pageInfo.endCursor
+      core.info(`endCursor = ${cursor}`)
       hasNextPage = pullrequestData.repository.pullRequests.pageInfo.hasNextPage
     }
   }

@@ -1,4 +1,4 @@
-import {IGithubPRNode, IGithubLabelNode} from './interfaces'
+import {IGithubPRNode, IGithubLabelNode, IGithubRepoLabels} from './interfaces'
 
 export function getPullrequestsWithoutMergeStatus(pullrequests: IGithubPRNode[]): IGithubPRNode[] {
   return pullrequests.filter((pullrequest: IGithubPRNode) => {
@@ -22,4 +22,14 @@ export function isAlreadyLabeled(pullrequest: IGithubPRNode, label: IGithubLabel
   return pullrequest.node.labels.edges.find((l: IGithubLabelNode) => {
     return l.node.id === label.node.id
   })
+}
+
+export function findConflictLabel(labelData: IGithubRepoLabels, conflictLabelName: string): IGithubLabelNode {
+  for (const label of labelData.repository.labels.edges) {
+    if (label.node.name === conflictLabelName) {
+      return label
+    }
+  }
+
+  throw new Error(`"${conflictLabelName}" label not found in your repository!`)
 }

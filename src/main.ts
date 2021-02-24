@@ -1,12 +1,13 @@
 import * as core from '@actions/core'
 import * as github from '@actions/github'
-import {IGithubLabelNode, IGithubPRNode, IGithubRepoLabels} from './interfaces'
+import {IGithubPRNode} from './interfaces'
 import {addLabelsToLabelable, getLabels, getPullRequests, removeLabelsFromLabelable} from './queries'
 import {
   getPullrequestsWithoutMergeStatus,
   getPullrequestsWithoutConflictingStatus,
   getPullrequestsWithoutMergeableStatus,
-  isAlreadyLabeled
+  isAlreadyLabeled,
+  findConflictLabel
 } from './util'
 import {wait} from './wait'
 
@@ -26,7 +27,7 @@ async function run(): Promise<void> {
     const conflictLabel = findConflictLabel(
       await getLabels(octokit, github.context, conflictLabelName),
       conflictLabelName
-    ) as IGithubLabelNode
+    )
 
     let pullRequests!: IGithubPRNode[]
 
@@ -80,16 +81,6 @@ async function run(): Promise<void> {
   } catch (error) {
     core.setFailed(error.message)
   }
-}
-
-function findConflictLabel(labelData: IGithubRepoLabels, conflictLabelName: string): IGithubLabelNode | undefined {
-  for (const label of labelData.repository.labels.edges) {
-    if (label.node.name === conflictLabelName) {
-      return label
-    }
-  }
-
-  core.setFailed(`"${conflictLabelName}" label not found in your repository!`)
 }
 
 run()

@@ -3,6 +3,8 @@ import * as github from '@actions/github'
 import nock from 'nock'
 
 import {wait} from '../src/wait'
+import {IGithubRepoLabels} from '../src/interfaces'
+import {findConflictLabel} from '../src/util'
 import {getLabels} from '../src/queries'
 
 test('throws invalid number', async () => {
@@ -16,6 +18,40 @@ test('wait 500 ms', async () => {
   const end = new Date()
   var delta = Math.abs(end.getTime() - start.getTime())
   expect(delta).toBeGreaterThan(450)
+})
+
+describe('label matching', () => {
+  test('find exact from one label', () => {
+    const labelNode = {node: {id: '1654984416', name: 'expected_label'}}
+    const labelData: IGithubRepoLabels = {repository: {labels: {edges: [labelNode]}}}
+    const node = findConflictLabel(labelData, 'expected_label')
+    expect(node).toBe(labelNode)
+  })
+
+  test('finds from many labels', () => {
+    const labelNode = {node: {id: '1654984416', name: 'expected_label'}}
+    const labelData: IGithubRepoLabels = {
+      repository: {labels: {edges: [{node: {id: 'MDU6TGFiZWwxMjUyNDcxNTgz', name: 'has conflicts'}}, labelNode]}}
+    }
+    const node = findConflictLabel(labelData, 'expected_label')
+    expect(node).toBe(labelNode)
+  })
+
+  test('throws when no match', () => {
+    const labelData: IGithubRepoLabels = {
+      repository: {
+        labels: {
+          edges: [
+            {node: {id: 'MDU6TGFiZWwxMjUyNDcxNTgz', name: 'has conflicts'}},
+            {node: {id: '1654984416', name: 'some other label'}}
+          ]
+        }
+      }
+    }
+    expect(() => {
+      findConflictLabel(labelData, 'expected_label')
+    }).toThrowError(/expected_label/)
+  })
 })
 
 // Inputs for mock @actions/core
@@ -111,6 +147,7 @@ describe('input-helper tests', () => {
     expect(labels.repository.labels.edges.length).toBe(2)
     expect(labels.repository.labels.edges[0].node.id).toBe('MDU6TGFiZWwyNzYwMjE1ODI0')
     expect(labels.repository.labels.edges[0].node.name).toBe('dependencies')
-    // typescript is undefined but it's there at runtime
+    expect(labels.repository.labels.edges[1].node.id).toBe('MDU6TGFiZWwyNzYwMjEzNzMw')
+    expect(labels.repository.labels.edges[1].node.name).toBe('wontfix')
   })
 })
