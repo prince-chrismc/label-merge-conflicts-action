@@ -1,9 +1,12 @@
-import * as core from '@actions/core'
 import {Context} from '@actions/github/lib/context'
 import {GitHub} from '@actions/github/lib/utils'
-import {IGithubPRNode, IGithubRepoLabels} from './interfaces'
+import {IGithubPRNode, IGithubRepoLabels, IGithubRepoPullRequets} from './interfaces'
 
-const getPullRequestPages = async (octokit: InstanceType<typeof GitHub>, context: Context, cursor?: string) => {
+const getPullRequestPages = async (
+  octokit: InstanceType<typeof GitHub>,
+  context: Context,
+  cursor?: string
+): Promise<IGithubRepoPullRequets> => {
   let query
   if (cursor) {
     query = `{
@@ -71,28 +74,17 @@ export const getPullRequests = async (
   octokit: InstanceType<typeof GitHub>,
   context: Context
 ): Promise<IGithubPRNode[]> => {
-  let pullrequestData: any
   let pullrequests: IGithubPRNode[] = []
   let cursor: string | undefined
-  let hasNextPage = true
+  let hasNextPage = false
 
-  while (hasNextPage) {
-    try {
-      pullrequestData = await getPullRequestPages(octokit, context, cursor)
-    } catch (error) {
-      core.setFailed(`getPullRequests request failed: ${error}`)
-    }
+  do {
+    const pullrequestData = await getPullRequestPages(octokit, context, cursor)
 
-    if (!pullrequestData || !pullrequestData.repository) {
-      hasNextPage = false
-      core.setFailed(`getPullRequests request failed: ${pullrequestData}`)
-    } else {
-      pullrequests = pullrequests.concat(pullrequestData.repository.pullRequests.edges)
-
-      cursor = pullrequestData.repository.pullRequests.pageInfo.endCursor
-      hasNextPage = pullrequestData.repository.pullRequests.pageInfo.hasNextPage
-    }
-  }
+    pullrequests = pullrequests.concat(pullrequestData.repository.pullRequests.edges)
+    cursor = pullrequestData.repository.pullRequests.pageInfo.endCursor
+    hasNextPage = pullrequestData.repository.pullRequests.pageInfo.hasNextPage
+  } while (hasNextPage)
 
   return pullrequests
 }
