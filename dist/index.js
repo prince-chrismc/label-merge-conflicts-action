@@ -202,40 +202,24 @@ const getPullRequestPages = (octokit, context, cursor) => __awaiter(void 0, void
       }
     }`;
     }
-    core.startGroup('getPullRequests');
-    core.info(query);
-    core.endGroup();
     return octokit.graphql(query, {
         headers: { Accept: 'application/vnd.github.ocelot-preview+json' }
     });
 });
 // fetch all PRs
 const getPullRequests = (octokit, context) => __awaiter(void 0, void 0, void 0, function* () {
-    let pullrequestData;
     let pullrequests = [];
     let cursor;
-    let hasNextPage = true;
-    while (hasNextPage) {
-        try {
-            pullrequestData = yield getPullRequestPages(octokit, context, cursor);
-            core.startGroup('getPullRequests -- Result');
-            core.info(util.inspect(pullrequestData, { showHidden: true, depth: null }));
-            core.endGroup();
-        }
-        catch (error) {
-            core.setFailed(`getPullRequests request failed: ${error}`);
-        }
-        if (!pullrequestData || !pullrequestData.repository) {
-            hasNextPage = false;
-            core.setFailed(`getPullRequests request failed: ${pullrequestData}`);
-        }
-        else {
-            pullrequests = pullrequests.concat(pullrequestData.repository.pullRequests.edges);
-            cursor = pullrequestData.repository.pullRequests.pageInfo.endCursor;
-            core.info(`endCursor = ${cursor}`);
-            hasNextPage = pullrequestData.repository.pullRequests.pageInfo.hasNextPage;
-        }
-    }
+    let hasNextPage = false;
+    core.startGroup('getPullRequests');
+    do {
+        const pullrequestData = yield getPullRequestPages(octokit, context, cursor);
+        core.debug(util.inspect(pullrequestData, { showHidden: true, depth: null }));
+        pullrequests = pullrequests.concat(pullrequestData.repository.pullRequests.edges);
+        cursor = pullrequestData.repository.pullRequests.pageInfo.endCursor;
+        hasNextPage = pullrequestData.repository.pullRequests.pageInfo.hasNextPage;
+    } while (hasNextPage);
+    core.endGroup();
     return pullrequests;
 });
 exports.getPullRequests = getPullRequests;

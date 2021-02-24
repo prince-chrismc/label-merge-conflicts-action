@@ -33,6 +33,7 @@ export interface IGithubRepoPullRequets {
   repository: {
     pullRequests: {
       edges: IGithubPRNode[]
+      pageInfo: IGithubPageInfo
     }
   }
 }

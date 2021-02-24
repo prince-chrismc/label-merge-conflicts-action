@@ -2,13 +2,13 @@ import * as util from 'util'
 import * as core from '@actions/core'
 import {Context} from '@actions/github/lib/context'
 import {GitHub} from '@actions/github/lib/utils'
-import {IGithubPRNode, IGithubRepoLabels/*, IGithubRepoPullRequets*/} from './interfaces'
+import {IGithubPRNode, IGithubRepoLabels, IGithubRepoPullRequets} from './interfaces'
 
 const getPullRequestPages = async (
   octokit: InstanceType<typeof GitHub>,
   context: Context,
   cursor?: string
-) /*: Promise<IGithubRepoPullRequets>*/ => {
+): Promise<IGithubRepoPullRequets> => {
   let query
   if (cursor) {
     query = `{
@@ -66,9 +66,6 @@ const getPullRequestPages = async (
     }`
   }
 
-  core.startGroup('getPullRequests')
-  core.info(query)
-  core.endGroup()
   return octokit.graphql(query, {
     headers: {Accept: 'application/vnd.github.ocelot-preview+json'}
   })
@@ -79,32 +76,20 @@ export const getPullRequests = async (
   octokit: InstanceType<typeof GitHub>,
   context: Context
 ): Promise<IGithubPRNode[]> => {
-  let pullrequestData: any
   let pullrequests: IGithubPRNode[] = []
   let cursor: string | undefined
-  let hasNextPage = true
+  let hasNextPage = false
 
-  while (hasNextPage) {
-    try {
-      pullrequestData = await getPullRequestPages(octokit, context, cursor)
-      core.startGroup('getPullRequests -- Result')
-      core.info(util.inspect(pullrequestData, {showHidden: true, depth: null}))
-      core.endGroup()
-    } catch (error) {
-      core.setFailed(`getPullRequests request failed: ${error}`)
-    }
+  core.startGroup('getPullRequests')
+  do {
+    const pullrequestData = await getPullRequestPages(octokit, context, cursor)
+    core.debug(util.inspect(pullrequestData, {showHidden: true, depth: null}))
 
-    if (!pullrequestData || !pullrequestData.repository) {
-      hasNextPage = false
-      core.setFailed(`getPullRequests request failed: ${pullrequestData}`)
-    } else {
-      pullrequests = pullrequests.concat(pullrequestData.repository.pullRequests.edges)
-
-      cursor = pullrequestData.repository.pullRequests.pageInfo.endCursor
-      core.info(`endCursor = ${cursor}`)
-      hasNextPage = pullrequestData.repository.pullRequests.pageInfo.hasNextPage
-    }
-  }
+    pullrequests = pullrequests.concat(pullrequestData.repository.pullRequests.edges)
+    cursor = pullrequestData.repository.pullRequests.pageInfo.endCursor
+    hasNextPage = pullrequestData.repository.pullRequests.pageInfo.hasNextPage
+  } while (hasNextPage)
+  core.endGroup()
 
   return pullrequests
 }
