@@ -30,7 +30,9 @@ export interface IGithubPageInfo {
 }
 
 export interface IGithubRepoPullRequets {
-  pullRequests: {
-    edges: IGithubPRNode[]
+  repository: {
+    pullRequests: {
+      edges: IGithubPRNode[]
+    }
   }
 }

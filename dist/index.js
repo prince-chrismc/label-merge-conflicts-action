@@ -142,6 +142,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.removeLabelsFromLabelable = exports.addLabelsToLabelable = exports.getLabels = exports.getPullRequests = void 0;
+const util = __importStar(__nccwpck_require__(669));
 const core = __importStar(__nccwpck_require__(186));
 const getPullRequestPages = (octokit, context, cursor) => __awaiter(void 0, void 0, void 0, function* () {
     let query;
@@ -218,7 +219,7 @@ const getPullRequests = (octokit, context) => __awaiter(void 0, void 0, void 0, 
         try {
             pullrequestData = yield getPullRequestPages(octokit, context, cursor);
             core.startGroup('getPullRequests -- Result');
-            core.info(pullrequestData);
+            core.info(util.inspect(pullrequestData, { showHidden: true, depth: null }));
             core.endGroup();
         }
         catch (error) {

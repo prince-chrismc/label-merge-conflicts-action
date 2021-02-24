@@ -1,9 +1,14 @@
+import * as util from 'util'
 import * as core from '@actions/core'
 import {Context} from '@actions/github/lib/context'
 import {GitHub} from '@actions/github/lib/utils'
-import {IGithubPRNode, IGithubRepoLabels} from './interfaces'
+import {IGithubPRNode, IGithubRepoLabels/*, IGithubRepoPullRequets*/} from './interfaces'
 
-const getPullRequestPages = async (octokit: InstanceType<typeof GitHub>, context: Context, cursor?: string) => {
+const getPullRequestPages = async (
+  octokit: InstanceType<typeof GitHub>,
+  context: Context,
+  cursor?: string
+) /*: Promise<IGithubRepoPullRequets>*/ => {
   let query
   if (cursor) {
     query = `{
@@ -83,7 +88,7 @@ export const getPullRequests = async (
     try {
       pullrequestData = await getPullRequestPages(octokit, context, cursor)
       core.startGroup('getPullRequests -- Result')
-      core.info(pullrequestData)
+      core.info(util.inspect(pullrequestData, {showHidden: true, depth: null}))
       core.endGroup()
     } catch (error) {
       core.setFailed(`getPullRequests request failed: ${error}`)
