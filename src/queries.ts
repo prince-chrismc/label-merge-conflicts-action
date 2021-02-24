@@ -1,5 +1,3 @@
-import * as util from 'util'
-import * as core from '@actions/core'
 import {Context} from '@actions/github/lib/context'
 import {GitHub} from '@actions/github/lib/utils'
 import {IGithubPRNode, IGithubRepoLabels, IGithubRepoPullRequets} from './interfaces'
@@ -80,16 +78,13 @@ export const getPullRequests = async (
   let cursor: string | undefined
   let hasNextPage = false
 
-  core.startGroup('getPullRequests')
   do {
     const pullrequestData = await getPullRequestPages(octokit, context, cursor)
-    core.debug(util.inspect(pullrequestData, {showHidden: true, depth: null}))
 
     pullrequests = pullrequests.concat(pullrequestData.repository.pullRequests.edges)
     cursor = pullrequestData.repository.pullRequests.pageInfo.endCursor
     hasNextPage = pullrequestData.repository.pullRequests.pageInfo.hasNextPage
   } while (hasNextPage)
-  core.endGroup()
 
   return pullrequests
 }

@@ -293,7 +293,7 @@ describe('queries', () => {
       expect(pullRequests[0].node.number).toBe(7)
       expect(pullRequests[0].node.mergeable).toBe('MERGEABLE')
       expect(pullRequests[0].node.labels.edges.length).toBe(0)
-      
+
       expect(pullRequests[1].node.id).toBe('justsomestring')
       expect(pullRequests[1].node.number).toBe(64)
       expect(pullRequests[1].node.mergeable).toBe('MERGEABLE')
