@@ -40,82 +40,55 @@ const core = __importStar(__nccwpck_require__(186));
 const github = __importStar(__nccwpck_require__(438));
 const queries_1 = __nccwpck_require__(775);
 const util_1 = __nccwpck_require__(24);
-const wait_1 = __nccwpck_require__(817);
+const pulls_1 = __nccwpck_require__(316);
 function run() {
     return __awaiter(this, void 0, void 0, function* () {
         try {
-            const conflictLabelName = core.getInput('conflict_label_name', {
-                required: true
-            });
+            const conflictLabelName = core.getInput('conflict_label_name', { required: true });
             const myToken = core.getInput('github_token', { required: true });
             const octokit = github.getOctokit(myToken);
             const maxRetries = parseInt(core.getInput('max_retries'), 10);
             const waitMs = parseInt(core.getInput('wait_ms'), 10);
             core.debug(`maxRetries=${maxRetries}; waitMs=${waitMs}`);
             // Get the label to use
-            const conflictLabel = findConflictLabel(yield queries_1.getLabels(octokit, github.context, conflictLabelName), conflictLabelName);
-            let pullRequests;
-            // fetch PRs up to $maxRetries times
-            // multiple fetches are necessary because Github computes the 'mergeable' status asynchronously, on request,
-            // which might not be available directly after the merge
-            let pullrequestsWithoutMergeStatus = [];
-            let tries = 0;
-            while ((pullrequestsWithoutMergeStatus.length > 0 && tries < maxRetries) || tries === 0) {
-                tries++;
-                // if merge status is unknown for any PR, wait a bit and retry
-                if (pullrequestsWithoutMergeStatus.length > 0) {
-                    core.debug(`...waiting for mergeable info...`);
-                    yield wait_1.wait(waitMs);
-                }
-                pullRequests = yield queries_1.getPullRequests(octokit, github.context);
-                // check if there are PRs with unknown mergeable status
-                pullrequestsWithoutMergeStatus = util_1.getPullrequestsWithoutMergeStatus(pullRequests);
-            }
-            // after $maxRetries we give up, probably Github has some issues
-            if (pullrequestsWithoutMergeStatus.length > 0) {
-                core.setFailed('Cannot determine mergeable status!');
-            }
+            const conflictLabel = util_1.findConflictLabel(yield queries_1.getLabels(octokit, github.context, conflictLabelName), conflictLabelName);
+            core.startGroup('🔎 Gather Pull Request Data');
+            const pullRequests = yield pulls_1.gatherPullRequests(octokit, github.context, waitMs, maxRetries);
+            core.endGroup();
+            core.startGroup('🏷️ Updating labels');
             for (const pullrequest of util_1.getPullrequestsWithoutConflictingStatus(pullRequests)) {
                 if (util_1.isAlreadyLabeled(pullrequest, conflictLabel)) {
                     core.debug(`Skipping PR #${pullrequest.node.number}, it has conflicts but is already labeled`);
                     continue;
                 }
-                core.debug(`Labeling PR #${pullrequest.node.number}...`);
+                core.info(`Labeling PR #${pullrequest.node.number}...`);
                 yield queries_1.addLabelsToLabelable(octokit, {
                     labelIds: conflictLabel.node.id,
                     labelableId: pullrequest.node.id
                 });
             }
-            // unlabel PRs without conflicts
             for (const pullrequest of util_1.getPullrequestsWithoutMergeableStatus(pullRequests)) {
                 if (util_1.isAlreadyLabeled(pullrequest, conflictLabel)) {
-                    core.debug(`Unlabeling PR #${pullrequest.node.number}...`);
+                    core.info(`Unlabeling PR #${pullrequest.node.number}...`);
                     yield queries_1.removeLabelsFromLabelable(octokit, {
                         labelIds: conflictLabel.node.id,
                         labelableId: pullrequest.node.id
                     });
                 }
             }
+            core.endGroup();
         }
         catch (error) {
             core.setFailed(error.message);
         }
     });
 }
-function findConflictLabel(labelData, conflictLabelName) {
-    for (const label of labelData.repository.labels.edges) {
-        if (label.node.name === conflictLabelName) {
-            return label;
-        }
-    }
-    core.setFailed(`"${conflictLabelName}" label not found in your repository!`);
-}
 run();
 
 
 /***/ }),
 
-/***/ 775:
+/***/ 316:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
 "use strict";
@@ -149,8 +122,61 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.removeLabelsFromLabelable = exports.addLabelsToLabelable = exports.getLabels = exports.getPullRequests = void 0;
+exports.gatherPullRequests = void 0;
 const core = __importStar(__nccwpck_require__(186));
+const wait_1 = __nccwpck_require__(817);
+const queries_1 = __nccwpck_require__(775);
+const util_1 = __nccwpck_require__(24);
+// fetch PRs up to $maxRetries times
+// multiple fetches are necessary because Github computes the 'mergeable' status asynchronously, on request,
+// which might not be available directly after the merge
+function gatherPullRequests(octokit, context, waitMs, maxRetries) {
+    return __awaiter(this, void 0, void 0, function* () {
+        let tries = 0;
+        let pullRequests = [];
+        let pullrequestsWithoutMergeStatus = [];
+        do {
+            tries++;
+            // if merge status is unknown for any PR, wait a bit and retry
+            if (pullrequestsWithoutMergeStatus.length > 0) {
+                core.info(`...waiting for mergeable info...`);
+                yield wait_1.wait(waitMs);
+            }
+            pullRequests = yield queries_1.getPullRequests(octokit, context);
+            pullrequestsWithoutMergeStatus = util_1.getPullrequestsWithoutMergeStatus(pullRequests); // filter PRs with unknown mergeable status
+        } while (pullrequestsWithoutMergeStatus.length > 0 && tries < maxRetries);
+        // after $maxRetries we give up, probably Github had some issues
+        if (pullrequestsWithoutMergeStatus.length > 0) {
+            core.setFailed(`Could not determine mergeable status for: ${pullrequestsWithoutMergeStatus
+                .map(pr => {
+                return pr.node.id;
+            })
+                .join(', ')}`);
+        }
+        return pullRequests;
+    });
+}
+exports.gatherPullRequests = gatherPullRequests;
+
+
+/***/ }),
+
+/***/ 775:
+/***/ (function(__unused_webpack_module, exports) {
+
+"use strict";
+
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.removeLabelsFromLabelable = exports.addLabelsToLabelable = exports.getLabels = exports.getPullRequests = void 0;
 const getPullRequestPages = (octokit, context, cursor) => __awaiter(void 0, void 0, void 0, function* () {
     let query;
     if (cursor) {
@@ -215,27 +241,15 @@ const getPullRequestPages = (octokit, context, cursor) => __awaiter(void 0, void
 });
 // fetch all PRs
 const getPullRequests = (octokit, context) => __awaiter(void 0, void 0, void 0, function* () {
-    let pullrequestData;
     let pullrequests = [];
     let cursor;
-    let hasNextPage = true;
-    while (hasNextPage) {
-        try {
-            pullrequestData = yield getPullRequestPages(octokit, context, cursor);
-        }
-        catch (error) {
-            core.setFailed(`getPullRequests request failed: ${error}`);
-        }
-        if (!pullrequestData || !pullrequestData.repository) {
-            hasNextPage = false;
-            core.setFailed(`getPullRequests request failed: ${pullrequestData}`);
-        }
-        else {
-            pullrequests = pullrequests.concat(pullrequestData.repository.pullRequests.edges);
-            cursor = pullrequestData.repository.pullRequests.pageInfo.endCursor;
-            hasNextPage = pullrequestData.repository.pullRequests.pageInfo.hasNextPage;
-        }
-    }
+    let hasNextPage = false;
+    do {
+        const pullrequestData = yield getPullRequestPages(octokit, context, cursor);
+        pullrequests = pullrequests.concat(pullrequestData.repository.pullRequests.edges);
+        cursor = pullrequestData.repository.pullRequests.pageInfo.endCursor;
+        hasNextPage = pullrequestData.repository.pullRequests.pageInfo.hasNextPage;
+    } while (hasNextPage);
     return pullrequests;
 });
 exports.getPullRequests = getPullRequests;
@@ -291,7 +305,7 @@ exports.removeLabelsFromLabelable = removeLabelsFromLabelable;
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.isAlreadyLabeled = exports.getPullrequestsWithoutMergeableStatus = exports.getPullrequestsWithoutConflictingStatus = exports.getPullrequestsWithoutMergeStatus = void 0;
+exports.findConflictLabel = exports.isAlreadyLabeled = exports.getPullrequestsWithoutMergeableStatus = exports.getPullrequestsWithoutConflictingStatus = exports.getPullrequestsWithoutMergeStatus = void 0;
 function getPullrequestsWithoutMergeStatus(pullrequests) {
     return pullrequests.filter((pullrequest) => {
         return pullrequest.node.mergeable === 'UNKNOWN';
@@ -316,6 +330,15 @@ function isAlreadyLabeled(pullrequest, label) {
     });
 }
 exports.isAlreadyLabeled = isAlreadyLabeled;
+function findConflictLabel(labelData, conflictLabelName) {
+    for (const label of labelData.repository.labels.edges) {
+        if (label.node.name === conflictLabelName) {
+            return label;
+        }
+    }
+    throw new Error(`"${conflictLabelName}" label not found in your repository!`);
+}
+exports.findConflictLabel = findConflictLabel;
 
 
 /***/ }),

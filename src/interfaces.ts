@@ -8,7 +8,7 @@ export interface IGithubLabelNode {
 export interface IGithubRepoLabels {
   repository: {
     labels: {
-      edges: [IGithubLabelNode]
+      edges: IGithubLabelNode[]
     }
   }
 }
@@ -19,7 +19,21 @@ export interface IGithubPRNode {
     number: string
     mergeable: string
     labels: {
-      edges: [IGithubLabelNode]
+      edges: IGithubLabelNode[]
+    }
+  }
+}
+
+export interface IGithubPageInfo {
+  endCursor: string
+  hasNextPage: boolean
+}
+
+export interface IGithubRepoPullRequets {
+  repository: {
+    pullRequests: {
+      edges: IGithubPRNode[]
+      pageInfo: IGithubPageInfo
     }
   }
 }
