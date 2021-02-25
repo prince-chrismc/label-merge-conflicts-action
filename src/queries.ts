@@ -124,7 +124,7 @@ export const addLabelToLabelable = async (
 ) => {
   const query = `
     mutation {
-      addLabelToLabelable(input: {labelIds: ["${labelId}"], labelableId: "${labelableId}"}) {
+      addLabelsToLabelable(input: {labelIds: ["${labelId}"], labelableId: "${labelableId}"}) {
         clientMutationId
       }
     }`
@@ -146,7 +146,7 @@ export const removeLabelFromLabelable = async (
 ) => {
   const query = `
     mutation {
-      removeLabelFromLabelable(input: {labelIds: ["${labelId}"], labelableId: "${labelableId}"}) {
+      removeLabelsFromLabelable(input: {labelIds: ["${labelId}"], labelableId: "${labelableId}"}) {
         clientMutationId
       }
     }`
