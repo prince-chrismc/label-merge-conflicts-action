@@ -1,12 +1,7 @@
 import * as core from '@actions/core'
 import * as github from '@actions/github'
-import {addLabelsToLabelable, getLabels, removeLabelsFromLabelable} from './queries'
-import {
-  getPullrequestsWithoutConflictingStatus,
-  getPullrequestsWithoutMergeableStatus,
-  isAlreadyLabeled,
-  findConflictLabel
-} from './util'
+import {addLabelToLabelable, getLabels, removeLabelFromLabelable} from './queries'
+import {isAlreadyLabeled, findLabelByName} from './util'
 import {gatherPullRequests} from './pulls'
 
 async function run(): Promise<void> {
@@ -20,7 +15,7 @@ async function run(): Promise<void> {
     core.debug(`maxRetries=${maxRetries}; waitMs=${waitMs}`)
 
     // Get the label to use
-    const conflictLabel = findConflictLabel(
+    const conflictLabel = findLabelByName(
       await getLabels(octokit, github.context, conflictLabelName),
       conflictLabelName
     )
@@ -30,26 +25,34 @@ async function run(): Promise<void> {
     core.endGroup()
 
     core.startGroup('🏷️ Updating labels')
-    for (const pullrequest of getPullrequestsWithoutConflictingStatus(pullRequests)) {
-      if (isAlreadyLabeled(pullrequest, conflictLabel)) {
-        core.debug(`Skipping PR #${pullrequest.node.number}, it has conflicts but is already labeled`)
-        continue
-      }
+    for (const pullRequest of pullRequests) {
+      const hasLabel = isAlreadyLabeled(pullRequest, conflictLabel)
+      switch (pullRequest.node.mergeable) {
+        case 'CONFLICTING':
+          if (hasLabel) {
+            core.debug(`Skipping PR #${pullRequest.node.number}, it is conflicting but is already labeled`)
+            break
+          }
 
-      core.info(`Labeling PR #${pullrequest.node.number}...`)
-      await addLabelsToLabelable(octokit, {
-        labelIds: conflictLabel.node.id,
-        labelableId: pullrequest.node.id
-      })
-    }
+          core.info(`Labeling PR #${pullRequest.node.number}...`)
+          await addLabelToLabelable(octokit, {
+            labelId: conflictLabel.node.id,
+            labelableId: pullRequest.node.id
+          })
+          break
 
-    for (const pullrequest of getPullrequestsWithoutMergeableStatus(pullRequests)) {
-      if (isAlreadyLabeled(pullrequest, conflictLabel)) {
-        core.info(`Unlabeling PR #${pullrequest.node.number}...`)
-        await removeLabelsFromLabelable(octokit, {
-          labelIds: conflictLabel.node.id,
-          labelableId: pullrequest.node.id
-        })
+        case 'MERGEABLE':
+          if (hasLabel) {
+            core.info(`Unlabeling PR #${pullRequest.node.number}...`)
+            await removeLabelFromLabelable(octokit, {
+              labelId: conflictLabel.node.id,
+              labelableId: pullRequest.node.id
+            })
+          }
+          break
+
+        default:
+          break
       }
     }
     core.endGroup()
