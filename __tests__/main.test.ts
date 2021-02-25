@@ -4,8 +4,9 @@ import nock from 'nock'
 
 import {wait} from '../src/wait'
 import {IGithubRepoLabels} from '../src/interfaces'
-import {findConflictLabel} from '../src/util'
-import {getLabels, getPullRequests} from '../src/queries'
+import {findLabelByName} from '../src/util'
+import {getLabels, getPullRequests, addLabelToLabelable, removeLabelFromLabelable} from '../src/queries'
+import {gatherPullRequests} from '../src/pulls'
 
 test('throws invalid number', async () => {
   const input = parseInt('foo', 10)
@@ -24,7 +25,7 @@ describe('label matching', () => {
   test('find exact from one label', () => {
     const labelNode = {node: {id: '1654984416', name: 'expected_label'}}
     const labelData: IGithubRepoLabels = {repository: {labels: {edges: [labelNode]}}}
-    const node = findConflictLabel(labelData, 'expected_label')
+    const node = findLabelByName(labelData, 'expected_label')
     expect(node).toBe(labelNode)
   })
 
@@ -33,7 +34,7 @@ describe('label matching', () => {
     const labelData: IGithubRepoLabels = {
       repository: {labels: {edges: [{node: {id: 'MDU6TGFiZWwxMjUyNDcxNTgz', name: 'has conflicts'}}, labelNode]}}
     }
-    const node = findConflictLabel(labelData, 'expected_label')
+    const node = findLabelByName(labelData, 'expected_label')
     expect(node).toBe(labelNode)
   })
 
@@ -49,7 +50,7 @@ describe('label matching', () => {
       }
     }
     expect(() => {
-      findConflictLabel(labelData, 'expected_label')
+      findLabelByName(labelData, 'expected_label')
     }).toThrowError(/expected_label/)
   })
 })
@@ -236,7 +237,7 @@ describe('queries', () => {
       expect(pullRequests[0].node.labels.edges.length).toBe(0)
     })
 
-    it('gathers pages of pull requests', async () => {
+    it('gets pages of pull requests', async () => {
       const scope = nock('https://api.github.com', {
         reqheaders: {
           authorization: 'token justafaketoken'
@@ -298,6 +299,178 @@ describe('queries', () => {
       expect(pullRequests[1].node.number).toBe(64)
       expect(pullRequests[1].node.mergeable).toBe('MERGEABLE')
       expect(pullRequests[1].node.labels.edges.length).toBe(0)
+    })
+
+    it('gathers pull requests', async () => {
+      const scope = nock('https://api.github.com', {
+        reqheaders: {
+          authorization: 'token justafaketoken'
+        }
+      })
+        .post('/graphql')
+        .reply(200, {
+          data: {
+            repository: {
+              pullRequests: {
+                edges: [
+                  {
+                    node: {
+                      id: 'MDExOlB1bGxSZXF1ZXN0NTc4ODgyNDUw',
+                      number: 7,
+                      mergeable: 'UNKNOWN',
+                      labels: {edges: []}
+                    },
+                    cursor: 'Y3Vyc29yOnYyOpHOIoELkg=='
+                  },
+                  {
+                    node: {
+                      id: 'justsomestring',
+                      number: 64,
+                      mergeable: 'MERGEABLE',
+                      labels: {edges: []}
+                    },
+                    cursor: 'dfgsdfhgsdghfgh=='
+                  }
+                ],
+                pageInfo: {endCursor: 'dfgsdfhgsdghfgh==', hasNextPage: false}
+              }
+            }
+          }
+        })
+        .post('/graphql')
+        .reply(200, {
+          data: {
+            repository: {
+              pullRequests: {
+                edges: [
+                  {
+                    node: {
+                      id: 'MDExOlB1bGxSZXF1ZXN0NTc4ODgyNDUw',
+                      number: 7,
+                      mergeable: 'MERGEABLE',
+                      labels: {edges: []}
+                    },
+                    cursor: 'Y3Vyc29yOnYyOpHOIoELkg=='
+                  },
+                  {
+                    node: {
+                      id: 'justsomestring',
+                      number: 64,
+                      mergeable: 'MERGEABLE',
+                      labels: {edges: []}
+                    },
+                    cursor: 'dfgsdfhgsdghfgh=='
+                  }
+                ],
+                pageInfo: {endCursor: 'dfgsdfhgsdghfgh==', hasNextPage: false}
+              }
+            }
+          }
+        })
+
+      const octokit = github.getOctokit('justafaketoken')
+      const pullRequests = await gatherPullRequests(octokit, github.context, 10, 1)
+
+      expect(pullRequests.length).toBe(2)
+      expect(pullRequests[0].node.id).toBe('MDExOlB1bGxSZXF1ZXN0NTc4ODgyNDUw')
+      expect(pullRequests[0].node.number).toBe(7)
+      expect(pullRequests[0].node.mergeable).toBe('MERGEABLE')
+      expect(pullRequests[0].node.labels.edges.length).toBe(0)
+
+      expect(pullRequests[1].node.id).toBe('justsomestring')
+      expect(pullRequests[1].node.number).toBe(64)
+      expect(pullRequests[1].node.mergeable).toBe('MERGEABLE')
+      expect(pullRequests[1].node.labels.edges.length).toBe(0)
+    })
+  })
+
+  describe('modifies labels', () => {
+    describe('add', () => {
+      it('adds a new label', async () => {
+        const scope = nock('https://api.github.com', {
+          reqheaders: {
+            authorization: 'token justafaketoken'
+          }
+        })
+          .post(
+            '/graphql',
+            /addLabelToLabelable.*{labelIds: \[.*"MDU6TGFiZWwyNzYwMjE1ODI0.*\], labelableId: .*"MDExOlB1bGxSZXF1ZXN0NTc4ODgyNDUw.*"}/
+          )
+          .reply(200, {data: {}})
+
+        const octokit = github.getOctokit('justafaketoken')
+        const add = await addLabelToLabelable(octokit, {
+          labelId: 'MDU6TGFiZWwyNzYwMjE1ODI0',
+          labelableId: 'MDExOlB1bGxSZXF1ZXN0NTc4ODgyNDUw'
+        })
+
+        expect(add).toBeTruthy()
+      })
+
+      it('throws on error response', async () => {
+        const scope = nock('https://api.github.com', {
+          reqheaders: {
+            authorization: 'token justafaketoken'
+          }
+        })
+          .post('/graphql')
+          .reply(400, {
+            message: 'Body should be a JSON object',
+            documentation_url: 'https://docs.github.com/graphql'
+          })
+
+        const octokit = github.getOctokit('justafaketoken')
+        const labels = addLabelToLabelable(octokit, {
+          labelId: 'MDU6TGFiZWwyNzYwMjE1ODI0',
+          labelableId: 'MDExOlB1bGxSZXF1ZXN0NTc4ODgyNDUw'
+        })
+
+        expect(labels).rejects.toThrowError()
+      })
+    })
+
+    describe('remove', () => {
+      it('removes an old label', async () => {
+        const scope = nock('https://api.github.com', {
+          reqheaders: {
+            authorization: 'token justafaketoken'
+          }
+        })
+          .post(
+            '/graphql',
+            /removeLabelFromLabelable.*{labelIds: \[.*"MDU6TGFiZWwyNzYwMjE1ODI0.*\], labelableId: .*"MDExOlB1bGxSZXF1ZXN0NTc4ODgyNDUw.*"}/
+          )
+          .reply(200, {data: {}})
+
+        const octokit = github.getOctokit('justafaketoken')
+        const add = await removeLabelFromLabelable(octokit, {
+          labelId: 'MDU6TGFiZWwyNzYwMjE1ODI0',
+          labelableId: 'MDExOlB1bGxSZXF1ZXN0NTc4ODgyNDUw'
+        })
+
+        expect(add).toBeTruthy()
+      })
+
+      it('throws on error response', async () => {
+        const scope = nock('https://api.github.com', {
+          reqheaders: {
+            authorization: 'token justafaketoken'
+          }
+        })
+          .post('/graphql')
+          .reply(400, {
+            message: 'Body should be a JSON object',
+            documentation_url: 'https://docs.github.com/graphql'
+          })
+
+        const octokit = github.getOctokit('justafaketoken')
+        const labels = removeLabelFromLabelable(octokit, {
+          labelId: 'MDU6TGFiZWwyNzYwMjE1ODI0',
+          labelableId: 'MDExOlB1bGxSZXF1ZXN0NTc4ODgyNDUw'
+        })
+
+        expect(labels).rejects.toThrowError()
+      })
     })
   })
 })

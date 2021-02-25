@@ -51,29 +51,36 @@ function run() {
             const waitMs = parseInt(core.getInput('wait_ms'), 10);
             core.debug(`maxRetries=${maxRetries}; waitMs=${waitMs}`);
             // Get the label to use
-            const conflictLabel = util_1.findConflictLabel(yield queries_1.getLabels(octokit, github.context, conflictLabelName), conflictLabelName);
+            const conflictLabel = util_1.findLabelByName(yield queries_1.getLabels(octokit, github.context, conflictLabelName), conflictLabelName);
             core.startGroup('🔎 Gather Pull Request Data');
             const pullRequests = yield pulls_1.gatherPullRequests(octokit, github.context, waitMs, maxRetries);
             core.endGroup();
             core.startGroup('🏷️ Updating labels');
-            for (const pullrequest of util_1.getPullrequestsWithoutConflictingStatus(pullRequests)) {
-                if (util_1.isAlreadyLabeled(pullrequest, conflictLabel)) {
-                    core.debug(`Skipping PR #${pullrequest.node.number}, it has conflicts but is already labeled`);
-                    continue;
-                }
-                core.info(`Labeling PR #${pullrequest.node.number}...`);
-                yield queries_1.addLabelsToLabelable(octokit, {
-                    labelIds: conflictLabel.node.id,
-                    labelableId: pullrequest.node.id
-                });
-            }
-            for (const pullrequest of util_1.getPullrequestsWithoutMergeableStatus(pullRequests)) {
-                if (util_1.isAlreadyLabeled(pullrequest, conflictLabel)) {
-                    core.info(`Unlabeling PR #${pullrequest.node.number}...`);
-                    yield queries_1.removeLabelsFromLabelable(octokit, {
-                        labelIds: conflictLabel.node.id,
-                        labelableId: pullrequest.node.id
-                    });
+            for (const pullRequest of pullRequests) {
+                const hasLabel = util_1.isAlreadyLabeled(pullRequest, conflictLabel);
+                switch (pullRequest.node.mergeable) {
+                    case 'CONFLICTING':
+                        if (hasLabel) {
+                            core.debug(`Skipping PR #${pullRequest.node.number}, it is conflicting but is already labeled`);
+                            break;
+                        }
+                        core.info(`Labeling PR #${pullRequest.node.number}...`);
+                        yield queries_1.addLabelToLabelable(octokit, {
+                            labelId: conflictLabel.node.id,
+                            labelableId: pullRequest.node.id
+                        });
+                        break;
+                    case 'MERGEABLE':
+                        if (hasLabel) {
+                            core.info(`Unlabeling PR #${pullRequest.node.number}...`);
+                            yield queries_1.removeLabelFromLabelable(octokit, {
+                                labelId: conflictLabel.node.id,
+                                labelableId: pullRequest.node.id
+                            });
+                        }
+                        break;
+                    default:
+                        break;
                 }
             }
             core.endGroup();
@@ -144,14 +151,15 @@ function gatherPullRequests(octokit, context, waitMs, maxRetries) {
             }
             pullRequests = yield queries_1.getPullRequests(octokit, context);
             pullrequestsWithoutMergeStatus = util_1.getPullrequestsWithoutMergeStatus(pullRequests); // filter PRs with unknown mergeable status
-        } while (pullrequestsWithoutMergeStatus.length > 0 && tries < maxRetries);
+        } while (pullrequestsWithoutMergeStatus.length > 0 && maxRetries >= tries);
         // after $maxRetries we give up, probably Github had some issues
         if (pullrequestsWithoutMergeStatus.length > 0) {
-            core.setFailed(`Could not determine mergeable status for: ${pullrequestsWithoutMergeStatus
+            // Only set failed so that we can proccess the rest of the pull requests the do have mergeable calculated
+            core.setFailed(`Could not determine mergeable status for: #${pullrequestsWithoutMergeStatus
                 .map(pr => {
                 return pr.node.id;
             })
-                .join(', ')}`);
+                .join(', #')}`);
         }
         return pullRequests;
     });
@@ -176,7 +184,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.removeLabelsFromLabelable = exports.addLabelsToLabelable = exports.getLabels = exports.getPullRequests = void 0;
+exports.removeLabelFromLabelable = exports.addLabelToLabelable = exports.getLabels = exports.getPullRequests = void 0;
 const getPullRequestPages = (octokit, context, cursor) => __awaiter(void 0, void 0, void 0, function* () {
     let query;
     if (cursor) {
@@ -271,10 +279,10 @@ const getLabels = (octokit, context, labelName) => __awaiter(void 0, void 0, voi
     });
 });
 exports.getLabels = getLabels;
-const addLabelsToLabelable = (octokit, { labelIds, labelableId }) => __awaiter(void 0, void 0, void 0, function* () {
+const addLabelToLabelable = (octokit, { labelId, labelableId }) => __awaiter(void 0, void 0, void 0, function* () {
     const query = `
     mutation {
-      addLabelsToLabelable(input: {labelIds: ["${labelIds}"], labelableId: "${labelableId}"}) {
+      addLabelToLabelable(input: {labelIds: ["${labelId}"], labelableId: "${labelableId}"}) {
         clientMutationId
       }
     }`;
@@ -282,11 +290,11 @@ const addLabelsToLabelable = (octokit, { labelIds, labelableId }) => __awaiter(v
         headers: { Accept: 'application/vnd.github.starfire-preview+json' }
     });
 });
-exports.addLabelsToLabelable = addLabelsToLabelable;
-const removeLabelsFromLabelable = (octokit, { labelIds, labelableId }) => __awaiter(void 0, void 0, void 0, function* () {
+exports.addLabelToLabelable = addLabelToLabelable;
+const removeLabelFromLabelable = (octokit, { labelId, labelableId }) => __awaiter(void 0, void 0, void 0, function* () {
     const query = `
     mutation {
-      removeLabelsFromLabelable(input: {labelIds: ["${labelIds}"], labelableId: "${labelableId}"}) {
+      removeLabelFromLabelable(input: {labelIds: ["${labelId}"], labelableId: "${labelableId}"}) {
         clientMutationId
       }
     }`;
@@ -294,7 +302,7 @@ const removeLabelsFromLabelable = (octokit, { labelIds, labelableId }) => __awai
         headers: { Accept: 'application/vnd.github.starfire-preview+json' }
     });
 });
-exports.removeLabelsFromLabelable = removeLabelsFromLabelable;
+exports.removeLabelFromLabelable = removeLabelFromLabelable;
 
 
 /***/ }),
@@ -305,40 +313,28 @@ exports.removeLabelsFromLabelable = removeLabelsFromLabelable;
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.findConflictLabel = exports.isAlreadyLabeled = exports.getPullrequestsWithoutMergeableStatus = exports.getPullrequestsWithoutConflictingStatus = exports.getPullrequestsWithoutMergeStatus = void 0;
+exports.findLabelByName = exports.isAlreadyLabeled = exports.getPullrequestsWithoutMergeStatus = void 0;
 function getPullrequestsWithoutMergeStatus(pullrequests) {
     return pullrequests.filter((pullrequest) => {
         return pullrequest.node.mergeable === 'UNKNOWN';
     });
 }
 exports.getPullrequestsWithoutMergeStatus = getPullrequestsWithoutMergeStatus;
-function getPullrequestsWithoutConflictingStatus(pullrequests) {
-    return pullrequests.filter((pullrequest) => {
-        return pullrequest.node.mergeable === 'CONFLICTING';
-    });
-}
-exports.getPullrequestsWithoutConflictingStatus = getPullrequestsWithoutConflictingStatus;
-function getPullrequestsWithoutMergeableStatus(pullrequests) {
-    return pullrequests.filter((pullrequest) => {
-        return pullrequest.node.mergeable === 'MERGEABLE';
-    });
-}
-exports.getPullrequestsWithoutMergeableStatus = getPullrequestsWithoutMergeableStatus;
 function isAlreadyLabeled(pullrequest, label) {
     return pullrequest.node.labels.edges.find((l) => {
         return l.node.id === label.node.id;
     });
 }
 exports.isAlreadyLabeled = isAlreadyLabeled;
-function findConflictLabel(labelData, conflictLabelName) {
+function findLabelByName(labelData, labelName) {
     for (const label of labelData.repository.labels.edges) {
-        if (label.node.name === conflictLabelName) {
+        if (label.node.name === labelName) {
             return label;
         }
     }
-    throw new Error(`"${conflictLabelName}" label not found in your repository!`);
+    throw new Error(`"${labelName}" label not found in your repository!`);
 }
-exports.findConflictLabel = findConflictLabel;
+exports.findLabelByName = findLabelByName;
 
 
 /***/ }),

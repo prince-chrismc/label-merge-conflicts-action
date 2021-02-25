@@ -6,30 +6,18 @@ export function getPullrequestsWithoutMergeStatus(pullrequests: IGithubPRNode[])
   })
 }
 
-export function getPullrequestsWithoutConflictingStatus(pullrequests: IGithubPRNode[]): IGithubPRNode[] {
-  return pullrequests.filter((pullrequest: IGithubPRNode) => {
-    return pullrequest.node.mergeable === 'CONFLICTING'
-  })
-}
-
-export function getPullrequestsWithoutMergeableStatus(pullrequests: IGithubPRNode[]): IGithubPRNode[] {
-  return pullrequests.filter((pullrequest: IGithubPRNode) => {
-    return pullrequest.node.mergeable === 'MERGEABLE'
-  })
-}
-
 export function isAlreadyLabeled(pullrequest: IGithubPRNode, label: IGithubLabelNode) {
   return pullrequest.node.labels.edges.find((l: IGithubLabelNode) => {
     return l.node.id === label.node.id
   })
 }
 
-export function findConflictLabel(labelData: IGithubRepoLabels, conflictLabelName: string): IGithubLabelNode {
+export function findLabelByName(labelData: IGithubRepoLabels, labelName: string): IGithubLabelNode {
   for (const label of labelData.repository.labels.edges) {
-    if (label.node.name === conflictLabelName) {
+    if (label.node.name === labelName) {
       return label
     }
   }
 
-  throw new Error(`"${conflictLabelName}" label not found in your repository!`)
+  throw new Error(`"${labelName}" label not found in your repository!`)
 }

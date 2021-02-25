@@ -112,19 +112,19 @@ export const getLabels = async (
   })
 }
 
-export const addLabelsToLabelable = async (
+export const addLabelToLabelable = async (
   octokit: InstanceType<typeof GitHub>,
   {
-    labelIds,
+    labelId,
     labelableId
   }: {
-    labelIds: string
+    labelId: string
     labelableId: string
   }
 ) => {
   const query = `
     mutation {
-      addLabelsToLabelable(input: {labelIds: ["${labelIds}"], labelableId: "${labelableId}"}) {
+      addLabelToLabelable(input: {labelIds: ["${labelId}"], labelableId: "${labelableId}"}) {
         clientMutationId
       }
     }`
@@ -134,19 +134,19 @@ export const addLabelsToLabelable = async (
   })
 }
 
-export const removeLabelsFromLabelable = async (
+export const removeLabelFromLabelable = async (
   octokit: InstanceType<typeof GitHub>,
   {
-    labelIds,
+    labelId,
     labelableId
   }: {
-    labelIds: string
+    labelId: string
     labelableId: string
   }
 ) => {
   const query = `
     mutation {
-      removeLabelsFromLabelable(input: {labelIds: ["${labelIds}"], labelableId: "${labelableId}"}) {
+      removeLabelFromLabelable(input: {labelIds: ["${labelId}"], labelableId: "${labelableId}"}) {
         clientMutationId
       }
     }`
