@@ -30,16 +30,17 @@ export async function gatherPullRequests(
 
     pullRequests = await getPullRequests(octokit, context)
     pullrequestsWithoutMergeStatus = getPullrequestsWithoutMergeStatus(pullRequests) // filter PRs with unknown mergeable status
-  } while (pullrequestsWithoutMergeStatus.length > 0 && tries < maxRetries)
+  } while (pullrequestsWithoutMergeStatus.length > 0 && maxRetries >= tries)
 
   // after $maxRetries we give up, probably Github had some issues
   if (pullrequestsWithoutMergeStatus.length > 0) {
+    // Only set failed so that we can proccess the rest of the pull requests the do have mergeable calculated
     core.setFailed(
-      `Could not determine mergeable status for: ${pullrequestsWithoutMergeStatus
+      `Could not determine mergeable status for: #${pullrequestsWithoutMergeStatus
         .map(pr => {
           return pr.node.id
         })
-        .join(', ')}`
+        .join(', #')}`
     )
   }
 
