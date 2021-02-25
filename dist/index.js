@@ -282,7 +282,7 @@ exports.getLabels = getLabels;
 const addLabelToLabelable = (octokit, { labelId, labelableId }) => __awaiter(void 0, void 0, void 0, function* () {
     const query = `
     mutation {
-      addLabelToLabelable(input: {labelIds: ["${labelId}"], labelableId: "${labelableId}"}) {
+      addLabelsToLabelable(input: {labelIds: ["${labelId}"], labelableId: "${labelableId}"}) {
         clientMutationId
       }
     }`;
@@ -294,7 +294,7 @@ exports.addLabelToLabelable = addLabelToLabelable;
 const removeLabelFromLabelable = (octokit, { labelId, labelableId }) => __awaiter(void 0, void 0, void 0, function* () {
     const query = `
     mutation {
-      removeLabelFromLabelable(input: {labelIds: ["${labelId}"], labelableId: "${labelableId}"}) {
+      removeLabelsFromLabelable(input: {labelIds: ["${labelId}"], labelableId: "${labelableId}"}) {
         clientMutationId
       }
     }`;
