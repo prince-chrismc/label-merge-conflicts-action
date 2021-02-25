@@ -36,10 +36,10 @@ jobs:
 
 ## Limitations
 
-Github does not reliably compute the `mergeable` status which is used by this action to detect merge conflicts.
-
-If `main` changes the mergeable status is unknown until someone (most likely this action) requests it.
-[Github then tries to compute the status with an async job.](https://stackoverflow.com/a/30620973)
-
-This is usually quick and simple, but there are no guarantees and Github might have issues.
-You can tweak `max_retries` and `wait_ms` to increase the timeout before giving up on a Pull Request.
+1. Github does not reliably compute the `mergeable` status which is used by this action to detect merge conflicts.
+    * If `main` changes the mergeable status is unknown until someone (most likely this action) requests it.
+[GitHub then tries to compute the status with an async job.](https://stackoverflow.com/a/30620973)
+    * This is usually quick and simple, but there are no guarantees and Github might have issues. You can tweak `max_retries` and `wait_ms` to increase the timeout before giving up on a Pull Request.
+2. GitHub does not run actions on pull requests which have conflicts
+    * When there is a conflict it prevents the merge commit from being calculated. [See this thread](https://github.community/t/run-actions-on-pull-requests-with-merge-conflicts/17104).
+    * This is required for the [`mergeable`](https://docs.github.com/en/graphql/reference/enums#mergeablestate) as per the [API documentation](https://docs.github.com/en/rest/reference/pulls#get-a-pull-request)
