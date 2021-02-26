@@ -1,6 +1,6 @@
 {
-  "name": "typescript-action",
-  "version": "0.0.0",
+  "name": "label-merge-conflicts-action",
+  "version": "0.0.4",
   "private": true,
   "description": "TypeScript template action",
   "main": "lib/main.js",
@@ -8,21 +8,25 @@
     "build": "tsc",
     "format": "prettier --write **/*.ts",
     "format-check": "prettier --check **/*.ts",
-    "lint": "eslint src/**/*.ts",
+    "lint": "eslint --fix src/**/*.ts",
     "package": "ncc build --source-map --license licenses.txt",
     "test": "jest",
-    "all": "yarn build && yarn format && yarn lint && yarn package && yarn test"
+    "all": "yarn format && yarn lint && yarn build && yarn package"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/actions/typescript-action.git"
+    "url": "git+https://github.com/prince-chrismc/label-merge-conflicts-action.git"
   },
   "keywords": [
     "actions",
     "node",
-    "setup"
+    "setup",
+    "typescript",
+    "github",
+    "actions",
+    "label"
   ],
-  "author": "",
+  "author": "prince-chrismc",
   "license": "MIT",
   "dependencies": {
     "@actions/core": "^1.2.6",
