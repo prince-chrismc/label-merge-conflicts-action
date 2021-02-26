@@ -3,8 +3,8 @@ import * as github from '@actions/github'
 import nock from 'nock'
 
 import {wait} from '../src/wait'
-import {IGithubRepoLabels} from '../src/interfaces'
-import {findLabelByName} from '../src/util'
+import {IGithubRepoLabels, IGithubPRNode} from '../src/interfaces'
+import {findLabelByName, isAlreadyLabeled} from '../src/util'
 import {getLabels, getPullRequests, addLabelToLabelable, removeLabelFromLabelable} from '../src/queries'
 import {gatherPullRequests} from '../src/pulls'
 
@@ -55,6 +55,55 @@ describe('label matching', () => {
   })
 })
 
+describe('pr label checking', () => {
+  test('finds from one label', () => {
+    const labelNode = {node: {id: '1654984416', name: 'expected_label'}}
+    const prNode: IGithubPRNode = {
+      node: {
+        id: 'MDExOlB1bGxSZXF1ZXN0NTc4ODgyNDUw',
+        number: '7',
+        mergeable: 'MERGEABLE',
+        labels: {edges: [labelNode]}
+      }
+    }
+    const isLabeled = isAlreadyLabeled(prNode, labelNode)
+    expect(isLabeled).toBeTruthy()
+  })
+
+  test('finds from many labels', () => {
+    const labelNode = {node: {id: '1654984416', name: 'expected_label'}}
+    const prNode: IGithubPRNode = {
+      node: {
+        id: 'MDExOlB1bGxSZXF1ZXN0NTc4ODgyNDUw',
+        number: '7',
+        mergeable: 'MERGEABLE',
+        labels: {edges: [{node: {id: 'MDU6TGFiZWwxMjUyNDcxNTgz', name: 'has conflicts'}}, labelNode]}
+      }
+    }
+    const isLabeled = isAlreadyLabeled(prNode, labelNode)
+    expect(isLabeled).toBeTruthy()
+  })
+
+  test('false when no match', () => {
+    const labelNode = {node: {id: '1654984416', name: 'expected_label'}}
+    const prNode: IGithubPRNode = {
+      node: {
+        id: 'MDExOlB1bGxSZXF1ZXN0NTc4ODgyNDUw',
+        number: '7',
+        mergeable: 'MERGEABLE',
+        labels: {
+          edges: [
+            {node: {id: 'MDU6TGFiZWwxMjUyNDcxNTgz', name: 'has conflicts'}},
+            {node: {id: 'flbvalvbea;lygh;dbl;gblas;', name: 'some other label'}}
+          ]
+        }
+      }
+    }
+    const isLabeled = isAlreadyLabeled(prNode, labelNode)
+    expect(isLabeled).toBeFalsy()
+  })
+})
+
 // Inputs for mock @actions/core
 let inputs = {} as any
 
@@ -75,6 +124,7 @@ describe('queries', () => {
     jest.spyOn(core, 'debug').mockImplementation(jest.fn())
     jest.spyOn(core, 'startGroup').mockImplementation(jest.fn())
     jest.spyOn(core, 'endGroup').mockImplementation(jest.fn())
+    jest.spyOn(core, 'setFailed').mockImplementation(jest.fn())
 
     // Mock github context
     jest.spyOn(github.context, 'repo', 'get').mockImplementation(() => {
@@ -382,6 +432,63 @@ describe('queries', () => {
       expect(pullRequests[1].node.mergeable).toBe('MERGEABLE')
       expect(pullRequests[1].node.labels.edges.length).toBe(0)
     })
+  })
+
+  it('retries gathering pull requests', async () => {
+    const scope = nock('https://api.github.com', {
+      reqheaders: {
+        authorization: 'token justafaketoken'
+      }
+    })
+      .post('/graphql')
+      .times(3)
+      .reply(200, {
+        data: {
+          repository: {
+            pullRequests: {
+              edges: [
+                {
+                  node: {
+                    id: 'MDExOlB1bGxSZXF1ZXN0NTc4ODgyNDUw',
+                    number: 7,
+                    mergeable: 'UNKNOWN',
+                    labels: {edges: []}
+                  },
+                  cursor: 'Y3Vyc29yOnYyOpHOIoELkg=='
+                },
+                {
+                  node: {
+                    id: 'justsomestring',
+                    number: 64,
+                    mergeable: 'MERGEABLE',
+                    labels: {edges: []}
+                  },
+                  cursor: 'dfgsdfhgsdghfgh=='
+                }
+              ],
+              pageInfo: {endCursor: 'dfgsdfhgsdghfgh==', hasNextPage: false}
+            }
+          }
+        }
+      })
+
+    const octokit = github.getOctokit('justafaketoken')
+    const start = new Date()
+    const pullRequests = await gatherPullRequests(octokit, github.context, 25, 2)
+    const end = new Date()
+    var delta = Math.abs(end.getTime() - start.getTime())
+    expect(delta).toBeGreaterThan(45)
+
+    expect(pullRequests.length).toBe(2)
+    expect(pullRequests[0].node.id).toBe('MDExOlB1bGxSZXF1ZXN0NTc4ODgyNDUw')
+    expect(pullRequests[0].node.number).toBe(7)
+    expect(pullRequests[0].node.mergeable).toBe('UNKNOWN')
+    expect(pullRequests[0].node.labels.edges.length).toBe(0)
+
+    expect(pullRequests[1].node.id).toBe('justsomestring')
+    expect(pullRequests[1].node.number).toBe(64)
+    expect(pullRequests[1].node.mergeable).toBe('MERGEABLE')
+    expect(pullRequests[1].node.labels.edges.length).toBe(0)
   })
 
   describe('modifies labels', () => {

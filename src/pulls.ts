@@ -38,7 +38,7 @@ export async function gatherPullRequests(
     core.setFailed(
       `Could not determine mergeable status for: #${pullrequestsWithoutMergeStatus
         .map(pr => {
-          return pr.node.id
+          return pr.node.number
         })
         .join(', #')}`
     )

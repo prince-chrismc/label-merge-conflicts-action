@@ -157,7 +157,7 @@ function gatherPullRequests(octokit, context, waitMs, maxRetries) {
             // Only set failed so that we can proccess the rest of the pull requests the do have mergeable calculated
             core.setFailed(`Could not determine mergeable status for: #${pullrequestsWithoutMergeStatus
                 .map(pr => {
-                return pr.node.id;
+                return pr.node.number;
             })
                 .join(', #')}`);
         }
