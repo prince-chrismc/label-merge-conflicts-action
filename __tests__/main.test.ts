@@ -1,9 +1,12 @@
 import * as core from '@actions/core'
 import * as github from '@actions/github'
 import nock from 'nock'
+import * as process from 'process'
+import * as cp from 'child_process'
+import * as path from 'path'
 
 import {wait} from '../src/wait'
-import {IGithubRepoLabels, IGithubPRNode, IGithubLabelNode, IGithubRepoPullRequets} from '../src/interfaces'
+import {IGithubRepoLabels, IGithubPRNode, IGithubLabelNode} from '../src/interfaces'
 import {findLabelByName, isAlreadyLabeled} from '../src/util'
 import {getLabels, getPullRequests, addLabelToLabelable, removeLabelFromLabelable} from '../src/queries'
 import {gatherPullRequests} from '../src/pulls'
@@ -738,4 +741,23 @@ describe('queries', () => {
       })
     })
   })
+})
+
+function testIf(condition: boolean, name: string, _test: jest.ProvidesCallback) {
+  if (condition) {
+    test(name, _test)
+  } else {
+    test.skip(name, _test)
+  }
+}
+
+testIf(process.env.GITHUB_REPOSITORY === 'prince-chrismc/label-merge-conflicts-action', 'test node.js run', () => {
+  process.env['INPUT_CONFLICT_LABEL_NAME'] = 'has conflict'
+  process.env['INPUT_GITHUB_TOKEN'] = process.env['GITHUB_TOKEN']
+  const np = process.execPath
+  const ip = path.join(__dirname, '..', 'lib', 'main.js')
+  const options: cp.ExecFileSyncOptions = {
+    env: process.env
+  }
+  console.log(cp.execFileSync(np, [ip], options).toString())
 })
