@@ -3,10 +3,11 @@ import * as github from '@actions/github'
 import nock from 'nock'
 
 import {wait} from '../src/wait'
-import {IGithubRepoLabels, IGithubPRNode} from '../src/interfaces'
+import {IGithubRepoLabels, IGithubPRNode, IGithubLabelNode, IGithubRepoPullRequets} from '../src/interfaces'
 import {findLabelByName, isAlreadyLabeled} from '../src/util'
 import {getLabels, getPullRequests, addLabelToLabelable, removeLabelFromLabelable} from '../src/queries'
 import {gatherPullRequests} from '../src/pulls'
+import {labelPullRequest} from '../src/label'
 
 test('throws invalid number', async () => {
   const input = parseInt('foo', 10)
@@ -244,7 +245,7 @@ describe('queries', () => {
       const octokit = github.getOctokit('justafaketoken')
       const labels = getLabels(octokit, github.context, 'expected_label')
 
-      expect(labels).rejects.toThrowError()
+      await expect(labels).rejects.toThrowError()
     })
   })
 
@@ -532,7 +533,7 @@ describe('queries', () => {
           labelableId: 'MDExOlB1bGxSZXF1ZXN0NTc4ODgyNDUw'
         })
 
-        expect(labels).rejects.toThrowError()
+        await expect(labels).rejects.toThrowError()
       })
     })
 
@@ -576,7 +577,164 @@ describe('queries', () => {
           labelableId: 'MDExOlB1bGxSZXF1ZXN0NTc4ODgyNDUw'
         })
 
-        expect(labels).rejects.toThrowError()
+        await expect(labels).rejects.toThrowError()
+      })
+    })
+  })
+
+  describe('correctly determines labeling', () => {
+    describe('add', () => {
+      it('adds a new label', async () => {
+        const scope = nock('https://api.github.com', {
+          reqheaders: {
+            authorization: 'token justafaketoken'
+          }
+        })
+          .post(
+            '/graphql',
+            /addLabelsToLabelable.*{labelIds: \[.*"MDU6TGFiZWwyNzYwMjE1ODI0.*\], labelableId: .*"MDExOlB1bGxSZXF1ZXN0NTc4ODgyNDUw.*"}/
+          )
+          .reply(200, {data: {}})
+
+        const labelNode: IGithubLabelNode = {node: {id: 'MDU6TGFiZWwyNzYwMjE1ODI0', name: 'expected_label'}}
+        const pullRequest: IGithubPRNode = {
+          node: {
+            id: 'MDExOlB1bGxSZXF1ZXN0NTc4ODgyNDUw',
+            number: '7',
+            mergeable: 'CONFLICTING',
+            labels: {edges: []}
+          }
+        }
+
+        const octokit = github.getOctokit('justafaketoken')
+        const added = labelPullRequest(octokit, pullRequest, labelNode)
+
+        await expect(added).resolves.toBe(undefined)
+      })
+
+      it('throws on error response', async () => {
+        const scope = nock('https://api.github.com', {
+          reqheaders: {
+            authorization: 'token justafaketoken'
+          }
+        })
+          .post(
+            '/graphql',
+            /addLabelsToLabelable.*{labelIds: \[.*"MDU6TGFiZWwyNzYwMjE1ODI0.*\], labelableId: .*"MDExOlB1bGxSZXF1ZXN0NTc4ODgyNDUw.*"}/
+          )
+          .reply(400, {
+            message: 'Body should be a JSON object',
+            documentation_url: 'https://docs.github.com/graphql'
+          })
+
+        const labelNode: IGithubLabelNode = {node: {id: 'MDU6TGFiZWwyNzYwMjE1ODI0', name: 'expected_label'}}
+        const pullRequest: IGithubPRNode = {
+          node: {
+            id: 'MDExOlB1bGxSZXF1ZXN0NTc4ODgyNDUw',
+            number: '7',
+            mergeable: 'CONFLICTING',
+            labels: {edges: []}
+          }
+        }
+
+        const octokit = github.getOctokit('justafaketoken')
+        const added = labelPullRequest(octokit, pullRequest, labelNode)
+
+        await expect(added).rejects.toThrowError()
+      })
+
+      it('does nothing when already labeled', async () => {
+        const labelNode: IGithubLabelNode = {node: {id: 'MDU6TGFiZWwyNzYwMjE1ODI0', name: 'expected_label'}}
+        const pullRequest: IGithubPRNode = {
+          node: {
+            id: 'MDExOlB1bGxSZXF1ZXN0NTc4ODgyNDUw',
+            number: '7',
+            mergeable: 'CONFLICTING',
+            labels: {edges: [labelNode]}
+          }
+        }
+
+        const octokit = github.getOctokit('justafaketoken')
+        const mockFunction = jest.spyOn(octokit, 'graphql').mockImplementation(jest.fn())
+        await labelPullRequest(octokit, pullRequest, labelNode)
+
+        expect(mockFunction).not.toBeCalled()
+      })
+    })
+
+    describe('remove', () => {
+      it('removes an old label', async () => {
+        const scope = nock('https://api.github.com', {
+          reqheaders: {
+            authorization: 'token justafaketoken'
+          }
+        })
+          .post(
+            '/graphql',
+            /removeLabelsFromLabelable.*{labelIds: \[.*"MDU6TGFiZWwyNzYwMjE1ODI0.*\], labelableId: .*"MDExOlB1bGxSZXF1ZXN0NTc4ODgyNDUw.*"}/
+          )
+          .reply(200, {data: {}})
+
+        const labelNode: IGithubLabelNode = {node: {id: 'MDU6TGFiZWwyNzYwMjE1ODI0', name: 'expected_label'}}
+        const pullRequest: IGithubPRNode = {
+          node: {
+            id: 'MDExOlB1bGxSZXF1ZXN0NTc4ODgyNDUw',
+            number: '7',
+            mergeable: 'MERGEABLE',
+            labels: {edges: [labelNode]}
+          }
+        }
+
+        const octokit = github.getOctokit('justafaketoken')
+        const removed = labelPullRequest(octokit, pullRequest, labelNode)
+
+        await expect(removed).resolves.toBe(undefined)
+      })
+
+      it('throws on error response', async () => {
+        const scope = nock('https://api.github.com', {
+          reqheaders: {
+            authorization: 'token justafaketoken'
+          }
+        })
+          .post('/graphql')
+          .reply(400, {
+            message: 'Body should be a JSON object',
+            documentation_url: 'https://docs.github.com/graphql'
+          })
+
+        const labelNode: IGithubLabelNode = {node: {id: 'MDU6TGFiZWwyNzYwMjE1ODI0', name: 'expected_label'}}
+        const pullRequest: IGithubPRNode = {
+          node: {
+            id: 'MDExOlB1bGxSZXF1ZXN0NTc4ODgyNDUw',
+            number: '7',
+            mergeable: 'MERGEABLE',
+            labels: {edges: [labelNode]}
+          }
+        }
+
+        const octokit = github.getOctokit('justafaketoken')
+        const removed = labelPullRequest(octokit, pullRequest, labelNode)
+
+        await expect(removed).rejects.toThrowError()
+      })
+
+      it('does nothing when no label', async () => {
+        const labelNode: IGithubLabelNode = {node: {id: 'MDU6TGFiZWwyNzYwMjE1ODI0', name: 'expected_label'}}
+        const pullRequest: IGithubPRNode = {
+          node: {
+            id: 'MDExOlB1bGxSZXF1ZXN0NTc4ODgyNDUw',
+            number: '7',
+            mergeable: 'MERGEABLE',
+            labels: {edges: []}
+          }
+        }
+
+        const octokit = github.getOctokit('justafaketoken')
+        const mockFunction = jest.spyOn(octokit, 'graphql').mockImplementation(jest.fn())
+        await labelPullRequest(octokit, pullRequest, labelNode)
+
+        expect(mockFunction).not.toBeCalled()
       })
     })
   })
