@@ -70,71 +70,13 @@ exports.labelPullRequest = labelPullRequest;
 /***/ }),
 
 /***/ 3109:
-/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    Object.defineProperty(o, k2, { enumerable: true, get: function() { return m[k]; } });
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
-});
-var __importStar = (this && this.__importStar) || function (mod) {
-    if (mod && mod.__esModule) return mod;
-    var result = {};
-    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
-    __setModuleDefault(result, mod);
-    return result;
-};
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-const core = __importStar(__nccwpck_require__(2186));
-const github = __importStar(__nccwpck_require__(5438));
-const queries_1 = __nccwpck_require__(775);
-const util_1 = __nccwpck_require__(4024);
-const pulls_1 = __nccwpck_require__(1316);
-const label_1 = __nccwpck_require__(7630);
-function run() {
-    return __awaiter(this, void 0, void 0, function* () {
-        try {
-            const conflictLabelName = core.getInput('conflict_label_name', { required: true });
-            const myToken = core.getInput('github_token', { required: true });
-            const octokit = github.getOctokit(myToken);
-            const maxRetries = parseInt(core.getInput('max_retries'), 10);
-            const waitMs = parseInt(core.getInput('wait_ms'), 10);
-            core.debug(`maxRetries=${maxRetries}; waitMs=${waitMs}`);
-            // Get the label to use
-            const conflictLabel = util_1.findLabelByName(yield queries_1.getLabels(octokit, github.context, conflictLabelName), conflictLabelName);
-            core.startGroup('🔎 Gather Pull Request Data');
-            const pullRequests = yield pulls_1.gatherPullRequests(octokit, github.context, waitMs, maxRetries);
-            core.endGroup();
-            core.startGroup('🏷️ Updating labels');
-            for (const pullRequest of pullRequests) {
-                yield label_1.labelPullRequest(octokit, pullRequest, conflictLabel);
-            }
-            core.endGroup();
-        }
-        catch (error) {
-            core.setFailed(error.message);
-        }
-    });
-}
-run();
+const run_1 = __nccwpck_require__(7884);
+run_1.run();
 
 
 /***/ }),
@@ -347,6 +289,77 @@ const removeLabelFromLabelable = (octokit, { labelId, labelableId }) => __awaite
     });
 });
 exports.removeLabelFromLabelable = removeLabelFromLabelable;
+
+
+/***/ }),
+
+/***/ 7884:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    Object.defineProperty(o, k2, { enumerable: true, get: function() { return m[k]; } });
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.run = void 0;
+const core = __importStar(__nccwpck_require__(2186));
+const github = __importStar(__nccwpck_require__(5438));
+const queries_1 = __nccwpck_require__(775);
+const util_1 = __nccwpck_require__(4024);
+const pulls_1 = __nccwpck_require__(1316);
+const label_1 = __nccwpck_require__(7630);
+function run() {
+    return __awaiter(this, void 0, void 0, function* () {
+        try {
+            const conflictLabelName = core.getInput('conflict_label_name', { required: true });
+            const myToken = core.getInput('github_token', { required: true });
+            const octokit = github.getOctokit(myToken);
+            const maxRetries = parseInt(core.getInput('max_retries'), 10) || 1; // Force invalid inputs to a 1
+            const waitMs = parseInt(core.getInput('wait_ms'), 10);
+            core.debug(`maxRetries=${maxRetries}; waitMs=${waitMs}`);
+            // Get the label to use
+            const conflictLabel = util_1.findLabelByName(yield queries_1.getLabels(octokit, github.context, conflictLabelName), conflictLabelName);
+            core.startGroup('🔎 Gather Pull Request Data');
+            const pullRequests = yield pulls_1.gatherPullRequests(octokit, github.context, waitMs, maxRetries);
+            core.endGroup();
+            core.startGroup('🏷️ Updating labels');
+            for (const pullRequest of pullRequests) {
+                yield label_1.labelPullRequest(octokit, pullRequest, conflictLabel);
+            }
+            core.endGroup();
+        }
+        catch (error) {
+            core.setFailed(error.message);
+        }
+    });
+}
+exports.run = run;
 
 
 /***/ }),

@@ -1,9 +1,6 @@
 import * as core from '@actions/core'
 import * as github from '@actions/github'
 import nock from 'nock'
-import * as process from 'process'
-import * as cp from 'child_process'
-import * as path from 'path'
 
 import {wait} from '../src/wait'
 import {IGithubRepoLabels, IGithubPRNode, IGithubLabelNode} from '../src/interfaces'
@@ -11,6 +8,7 @@ import {findLabelByName, isAlreadyLabeled} from '../src/util'
 import {getLabels, getPullRequests, addLabelToLabelable, removeLabelFromLabelable} from '../src/queries'
 import {gatherPullRequests} from '../src/pulls'
 import {labelPullRequest} from '../src/label'
+import {run} from '../src/run'
 
 test('throws invalid number', async () => {
   const input = parseInt('foo', 10)
@@ -741,23 +739,91 @@ describe('queries', () => {
       })
     })
   })
-})
 
-function testIf(condition: boolean, name: string, _test: jest.ProvidesCallback) {
-  if (condition) {
-    test(name, _test)
-  } else {
-    test.skip(name, _test)
-  }
-}
+  test('the whole sequence', async () => {
+    const scope = nock('https://api.github.com', {
+      reqheaders: {
+        authorization: 'token justafaketoken'
+      }
+    })
+      .post('/graphql')
+      .reply(200, {
+        data: {repository: {labels: {edges: [{node: {id: 'MDU6TGFiZWwyNzYwMjE1ODI0', name: 'expected_label'}}]}}}
+      })
+      .post('/graphql')
+      .reply(200, {
+        data: {
+          repository: {
+            pullRequests: {
+              edges: [
+                {
+                  node: {
+                    id: 'MDExOlB1bGxSZXF1ZXN0NTc4ODgyNDUw',
+                    number: 7,
+                    mergeable: 'UNKNOWN',
+                    labels: {edges: []}
+                  },
+                  cursor: 'Y3Vyc29yOnYyOpHOIoELkg=='
+                },
+                {
+                  node: {
+                    id: 'justsomestring',
+                    number: 64,
+                    mergeable: 'MERGEABLE',
+                    labels: {edges: []}
+                  },
+                  cursor: 'dfgsdfhgsdghfgh=='
+                }
+              ],
+              pageInfo: {endCursor: 'dfgsdfhgsdghfgh==', hasNextPage: false}
+            }
+          }
+        }
+      })
+      .post('/graphql')
+      .reply(200, {
+        data: {
+          repository: {
+            pullRequests: {
+              edges: [
+                {
+                  node: {
+                    id: 'MDExOlB1bGxSZXF1ZXN0NTc4ODgyNDUw',
+                    number: 7,
+                    mergeable: 'CONFLICTING',
+                    labels: {edges: []}
+                  },
+                  cursor: 'Y3Vyc29yOnYyOpHOIoELkg=='
+                },
+                {
+                  node: {
+                    id: 'justsomestring',
+                    number: 64,
+                    mergeable: 'MERGEABLE',
+                    labels: {edges: []}
+                  },
+                  cursor: 'dfgsdfhgsdghfgh=='
+                }
+              ],
+              pageInfo: {endCursor: 'dfgsdfhgsdghfgh==', hasNextPage: false}
+            }
+          }
+        }
+      })
+      .post(
+        '/graphql',
+        /addLabelsToLabelable.*{labelIds: \[.*"MDU6TGFiZWwyNzYwMjE1ODI0.*\], labelableId: .*"MDExOlB1bGxSZXF1ZXN0NTc4ODgyNDUw.*"}/
+      )
+      .reply(200, {data: {}})
 
-testIf(process.env.GITHUB_REPOSITORY === 'prince-chrismc/label-merge-conflicts-action', 'test node.js run', () => {
-  process.env['INPUT_CONFLICT_LABEL_NAME'] = 'has conflict'
-  process.env['INPUT_GITHUB_TOKEN'] = process.env['GITHUB_TOKEN']
-  const np = process.execPath
-  const ip = path.join(__dirname, '..', 'lib', 'main.js')
-  const options: cp.ExecFileSyncOptions = {
-    env: process.env
-  }
-  console.log(cp.execFileSync(np, [ip], options).toString())
+    const mock = jest.spyOn(core, 'setFailed').mockImplementation(jest.fn())
+
+    inputs['conflict_label_name'] = 'expected_label'
+    inputs['github_token'] = 'justafaketoken'
+    // inputs['max_retries'] = '1'
+    inputs['wait_ms'] = '25'
+    await run()
+
+    expect(mock).not.toBeCalled()
+  })
 })
