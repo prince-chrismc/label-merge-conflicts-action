@@ -17,7 +17,6 @@ jobs:
           key: ${{ runner.os }}-${{ hashFiles('**/yarn.lock') }}
       - run: yarn install
       - run: yarn all
-      - run: git diff-index --quiet HEAD -- # Make sure to fail if anything changes (ie building or linting)
 
   e2e: # make sure the action works on a clean machine without building
     runs-on: ubuntu-latest
