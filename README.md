@@ -2,6 +2,8 @@
 [![MIT](https://img.shields.io/github/license/prince-chrismc/label-merge-conflicts-action)](https://github.com/prince-chrismc/label-merge-conflicts-action/blob/main/LICENSE)
 [![codecov](https://img.shields.io/codecov/c/github/prince-chrismc/label-merge-conflicts-action)](https://codecov.io/gh/prince-chrismc/label-merge-conflicts-action)
 
+![logo](https://raw.githubusercontent.com/prince-chrismc/label-merge-conflicts-action/logo/.github/logo.svg)
+
 ## Purpose
 
 This action checks all open pull requests for merge conflicts and marks them with a [label](https://guides.github.com/features/issues/#filtering).
