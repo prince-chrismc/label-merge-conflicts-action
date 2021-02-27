@@ -389,7 +389,7 @@ function findLabelByName(labelData, labelName) {
             return label;
         }
     }
-    throw new Error(`"${labelName}" label not found in your repository!`);
+    throw new Error(`The label "${labelName}" was not found in your repository!`);
 }
 exports.findLabelByName = findLabelByName;
 

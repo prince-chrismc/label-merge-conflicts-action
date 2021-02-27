@@ -19,5 +19,5 @@ export function findLabelByName(labelData: IGithubRepoLabels, labelName: string)
     }
   }
 
-  throw new Error(`"${labelName}" label not found in your repository!`)
+  throw new Error(`The label "${labelName}" was not found in your repository!`)
 }

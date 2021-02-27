@@ -738,92 +738,134 @@ describe('queries', () => {
         expect(mockFunction).not.toBeCalled()
       })
     })
+
+    it('does nothing when mergeable is unknown', async () => {
+      const labelNode: IGithubLabelNode = {node: {id: 'MDU6TGFiZWwyNzYwMjE1ODI0', name: 'expected_label'}}
+      const pullRequest: IGithubPRNode = {
+        node: {
+          id: 'MDExOlB1bGxSZXF1ZXN0NTc4ODgyNDUw',
+          number: '7',
+          mergeable: 'UNKNOWN',
+          labels: {edges: []}
+        }
+      }
+
+      const octokit = github.getOctokit('justafaketoken')
+      const mockFunction = jest.spyOn(octokit, 'graphql').mockImplementation(jest.fn())
+      await labelPullRequest(octokit, pullRequest, labelNode)
+
+      expect(mockFunction).not.toBeCalled()
+    })
   })
 
-  test('the whole sequence', async () => {
-    const scope = nock('https://api.github.com', {
-      reqheaders: {
-        authorization: 'token justafaketoken'
-      }
+  describe('the whole sequence', async () => {
+    test('works', async () => {
+      const scope = nock('https://api.github.com', {
+        reqheaders: {
+          authorization: 'token justafaketoken'
+        }
+      })
+        .post('/graphql')
+        .reply(200, {
+          data: {repository: {labels: {edges: [{node: {id: 'MDU6TGFiZWwyNzYwMjE1ODI0', name: 'expected_label'}}]}}}
+        })
+        .post('/graphql')
+        .reply(200, {
+          data: {
+            repository: {
+              pullRequests: {
+                edges: [
+                  {
+                    node: {
+                      id: 'MDExOlB1bGxSZXF1ZXN0NTc4ODgyNDUw',
+                      number: 7,
+                      mergeable: 'UNKNOWN',
+                      labels: {edges: []}
+                    },
+                    cursor: 'Y3Vyc29yOnYyOpHOIoELkg=='
+                  },
+                  {
+                    node: {
+                      id: 'justsomestring',
+                      number: 64,
+                      mergeable: 'MERGEABLE',
+                      labels: {edges: []}
+                    },
+                    cursor: 'dfgsdfhgsdghfgh=='
+                  }
+                ],
+                pageInfo: {endCursor: 'dfgsdfhgsdghfgh==', hasNextPage: false}
+              }
+            }
+          }
+        })
+        .post('/graphql')
+        .reply(200, {
+          data: {
+            repository: {
+              pullRequests: {
+                edges: [
+                  {
+                    node: {
+                      id: 'MDExOlB1bGxSZXF1ZXN0NTc4ODgyNDUw',
+                      number: 7,
+                      mergeable: 'CONFLICTING',
+                      labels: {edges: []}
+                    },
+                    cursor: 'Y3Vyc29yOnYyOpHOIoELkg=='
+                  },
+                  {
+                    node: {
+                      id: 'justsomestring',
+                      number: 64,
+                      mergeable: 'MERGEABLE',
+                      labels: {edges: []}
+                    },
+                    cursor: 'dfgsdfhgsdghfgh=='
+                  }
+                ],
+                pageInfo: {endCursor: 'dfgsdfhgsdghfgh==', hasNextPage: false}
+              }
+            }
+          }
+        })
+        .post(
+          '/graphql',
+          /addLabelsToLabelable.*{labelIds: \[.*"MDU6TGFiZWwyNzYwMjE1ODI0.*\], labelableId: .*"MDExOlB1bGxSZXF1ZXN0NTc4ODgyNDUw.*"}/
+        )
+        .reply(200, {data: {}})
+
+      const mock = jest.spyOn(core, 'setFailed').mockImplementation(jest.fn())
+
+      inputs['conflict_label_name'] = 'expected_label'
+      inputs['github_token'] = 'justafaketoken'
+      // inputs['max_retries'] = '1'
+      inputs['wait_ms'] = '25'
+      await run()
+
+      expect(mock).not.toBeCalled()
     })
-      .post('/graphql')
-      .reply(200, {
-        data: {repository: {labels: {edges: [{node: {id: 'MDU6TGFiZWwyNzYwMjE1ODI0', name: 'expected_label'}}]}}}
-      })
-      .post('/graphql')
-      .reply(200, {
-        data: {
-          repository: {
-            pullRequests: {
-              edges: [
-                {
-                  node: {
-                    id: 'MDExOlB1bGxSZXF1ZXN0NTc4ODgyNDUw',
-                    number: 7,
-                    mergeable: 'UNKNOWN',
-                    labels: {edges: []}
-                  },
-                  cursor: 'Y3Vyc29yOnYyOpHOIoELkg=='
-                },
-                {
-                  node: {
-                    id: 'justsomestring',
-                    number: 64,
-                    mergeable: 'MERGEABLE',
-                    labels: {edges: []}
-                  },
-                  cursor: 'dfgsdfhgsdghfgh=='
-                }
-              ],
-              pageInfo: {endCursor: 'dfgsdfhgsdghfgh==', hasNextPage: false}
-            }
-          }
+
+    test('fails when label does not exist', async () => {
+      const scope = nock('https://api.github.com', {
+        reqheaders: {
+          authorization: 'token justafaketoken'
         }
       })
-      .post('/graphql')
-      .reply(200, {
-        data: {
-          repository: {
-            pullRequests: {
-              edges: [
-                {
-                  node: {
-                    id: 'MDExOlB1bGxSZXF1ZXN0NTc4ODgyNDUw',
-                    number: 7,
-                    mergeable: 'CONFLICTING',
-                    labels: {edges: []}
-                  },
-                  cursor: 'Y3Vyc29yOnYyOpHOIoELkg=='
-                },
-                {
-                  node: {
-                    id: 'justsomestring',
-                    number: 64,
-                    mergeable: 'MERGEABLE',
-                    labels: {edges: []}
-                  },
-                  cursor: 'dfgsdfhgsdghfgh=='
-                }
-              ],
-              pageInfo: {endCursor: 'dfgsdfhgsdghfgh==', hasNextPage: false}
-            }
-          }
-        }
-      })
-      .post(
-        '/graphql',
-        /addLabelsToLabelable.*{labelIds: \[.*"MDU6TGFiZWwyNzYwMjE1ODI0.*\], labelableId: .*"MDExOlB1bGxSZXF1ZXN0NTc4ODgyNDUw.*"}/
-      )
-      .reply(200, {data: {}})
+        .post('/graphql')
+        .reply(200, {
+          data: {repository: {labels: {edges: [{node: {id: 'MDU6TGFiZWwyNzYwMjE1ODI0', name: 'expected_label'}}]}}}
+        })
 
-    const mock = jest.spyOn(core, 'setFailed').mockImplementation(jest.fn())
+      const mock = jest.spyOn(core, 'setFailed').mockImplementation(jest.fn())
 
-    inputs['conflict_label_name'] = 'expected_label'
-    inputs['github_token'] = 'justafaketoken'
-    // inputs['max_retries'] = '1'
-    inputs['wait_ms'] = '25'
-    await run()
+      inputs['conflict_label_name'] = 'this will not match'
+      inputs['github_token'] = 'justafaketoken'
+      // inputs['max_retries'] = '1'
+      inputs['wait_ms'] = '25'
+      await run()
 
-    expect(mock).not.toBeCalled()
+      expect(mock).toBeCalledWith('The label "this will not match" was not found in your repository!')
+    })
   })
 })
