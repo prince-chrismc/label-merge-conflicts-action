@@ -2,7 +2,7 @@
 [![MIT](https://img.shields.io/github/license/prince-chrismc/label-merge-conflicts-action)](https://github.com/prince-chrismc/label-merge-conflicts-action/blob/main/LICENSE)
 [![codecov](https://img.shields.io/codecov/c/github/prince-chrismc/label-merge-conflicts-action)](https://codecov.io/gh/prince-chrismc/label-merge-conflicts-action)
 
-![logo](http://s3.media.squarespace.com/production/2129687/19317774/.a/6a00d8341d3df553ef0134885909e0970c-pi)
+![logo](https://github.com/prince-chrismc/label-merge-conflicts-action/blob/logo/.github/label-merge-conflicts.png?raw=true)
 
 ## Purpose
 
