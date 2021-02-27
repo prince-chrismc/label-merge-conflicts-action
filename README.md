@@ -6,7 +6,7 @@
 
 This action checks all open pull requests for merge conflicts and marks them with a [label](https://guides.github.com/features/issues/#filtering).
 
-![comic](https://github.com/prince-chrismc/label-merge-conflicts-action/blob/logo/.github/label-merge-conflicts.png?raw=true)
+![comic](https://github.com/prince-chrismc/label-merge-conflicts-action/blob/main/.github/label-merge-conflicts.png?raw=true)
 
 > Work by [Geek & Poke: Being A Coder Made Easy](https://geek-and-poke.com/geekandpoke/2010/10/21/being-a-code-made-easy-chapter-1.html) ([CC BY 3.0](https://creativecommons.org/licenses/by/3.0/)) just shorter.
 
