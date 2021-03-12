@@ -63,7 +63,7 @@ describe('pr label checking', () => {
     const prNode: IGithubPRNode = {
       node: {
         id: 'MDExOlB1bGxSZXF1ZXN0NTc4ODgyNDUw',
-        number: '7',
+        number: 7,
         mergeable: 'MERGEABLE',
         labels: {edges: [labelNode]}
       }
@@ -77,7 +77,7 @@ describe('pr label checking', () => {
     const prNode: IGithubPRNode = {
       node: {
         id: 'MDExOlB1bGxSZXF1ZXN0NTc4ODgyNDUw',
-        number: '7',
+        number: 7,
         mergeable: 'MERGEABLE',
         labels: {edges: [{node: {id: 'MDU6TGFiZWwxMjUyNDcxNTgz', name: 'has conflicts'}}, labelNode]}
       }
@@ -91,7 +91,7 @@ describe('pr label checking', () => {
     const prNode: IGithubPRNode = {
       node: {
         id: 'MDExOlB1bGxSZXF1ZXN0NTc4ODgyNDUw',
-        number: '7',
+        number: 7,
         mergeable: 'MERGEABLE',
         labels: {
           edges: [
@@ -601,7 +601,7 @@ describe('queries', () => {
         const pullRequest: IGithubPRNode = {
           node: {
             id: 'MDExOlB1bGxSZXF1ZXN0NTc4ODgyNDUw',
-            number: '7',
+            number: 7,
             mergeable: 'CONFLICTING',
             labels: {edges: []}
           }
@@ -632,7 +632,7 @@ describe('queries', () => {
         const pullRequest: IGithubPRNode = {
           node: {
             id: 'MDExOlB1bGxSZXF1ZXN0NTc4ODgyNDUw',
-            number: '7',
+            number: 7,
             mergeable: 'CONFLICTING',
             labels: {edges: []}
           }
@@ -680,7 +680,7 @@ describe('queries', () => {
         const pullRequest: IGithubPRNode = {
           node: {
             id: 'MDExOlB1bGxSZXF1ZXN0NTc4ODgyNDUw',
-            number: '7',
+            number: 7,
             mergeable: 'MERGEABLE',
             labels: {edges: [labelNode]}
           }
@@ -708,7 +708,7 @@ describe('queries', () => {
         const pullRequest: IGithubPRNode = {
           node: {
             id: 'MDExOlB1bGxSZXF1ZXN0NTc4ODgyNDUw',
-            number: '7',
+            number: 7,
             mergeable: 'MERGEABLE',
             labels: {edges: [labelNode]}
           }
@@ -725,7 +725,7 @@ describe('queries', () => {
         const pullRequest: IGithubPRNode = {
           node: {
             id: 'MDExOlB1bGxSZXF1ZXN0NTc4ODgyNDUw',
-            number: '7',
+            number: 7,
             mergeable: 'MERGEABLE',
             labels: {edges: []}
           }
@@ -744,7 +744,7 @@ describe('queries', () => {
       const pullRequest: IGithubPRNode = {
         node: {
           id: 'MDExOlB1bGxSZXF1ZXN0NTc4ODgyNDUw',
-          number: '7',
+          number: 7,
           mergeable: 'UNKNOWN',
           labels: {edges: []}
         }

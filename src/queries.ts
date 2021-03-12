@@ -7,66 +7,36 @@ const getPullRequestPages = async (
   context: Context,
   cursor?: string
 ): Promise<IGithubRepoPullRequets> => {
-  let query
-  if (cursor) {
-    query = `{
-      repository(owner: "${context.repo.owner}", name: "${context.repo.repo}") {
-        pullRequests(first: 100, states: OPEN, after: "${cursor}") {
-          edges {
-            node {
-              id
-              number
-              mergeable
-              labels(first: 100) {
-                edges {
-                  node {
-                    id
-                    name
-                  }
+  const query = `{
+    repository(owner: "${context.repo.owner}", name: "${context.repo.repo}") {
+      pullRequests(first: 100, states: OPEN, after: "${cursor ? cursor : null}") {
+        edges {
+          node {
+            id
+            number
+            mergeable
+            potentialMergeCommit {
+              oid 
+            }
+            labels(first: 100) {
+              edges {
+                node {
+                  id
+                  name
                 }
               }
             }
-            cursor
-          }
-          pageInfo {
-            endCursor
-            hasNextPage
           }
         }
-      }
-    }`
-  } else {
-    query = `{
-      repository(owner: "${context.repo.owner}", name: "${context.repo.repo}") {
-        pullRequests(first: 100, states: OPEN) {
-          edges {
-            node {
-              id
-              number
-              mergeable
-              labels(first: 100) {
-                edges {
-                  node {
-                    id
-                    name
-                  }
-                }
-              }
-            }
-            cursor
-          }
-          pageInfo {
-            endCursor
-            hasNextPage
-          }
+        pageInfo {
+          endCursor
+          hasNextPage
         }
       }
-    }`
-  }
+    }
+  }`
 
-  return octokit.graphql(query, {
-    headers: {Accept: 'application/vnd.github.ocelot-preview+json'}
-  })
+  return octokit.graphql(query)
 }
 
 // fetch all PRs
@@ -107,9 +77,7 @@ export const getLabels = async (
     }
   }`
 
-  return octokit.graphql(query, {
-    headers: {Accept: 'application/vnd.github.ocelot-preview+json'}
-  })
+  return octokit.graphql(query)
 }
 
 export const addLabelToLabelable = async (
@@ -123,15 +91,13 @@ export const addLabelToLabelable = async (
   }
 ) => {
   const query = `
-    mutation {
-      addLabelsToLabelable(input: {labelIds: ["${labelId}"], labelableId: "${labelableId}"}) {
-        clientMutationId
-      }
-    }`
+  mutation {
+    addLabelsToLabelable(input: {labelIds: ["${labelId}"], labelableId: "${labelableId}"}) {
+      clientMutationId
+    }
+  }`
 
-  return octokit.graphql(query, {
-    headers: {Accept: 'application/vnd.github.starfire-preview+json'}
-  })
+  return octokit.graphql(query)
 }
 
 export const removeLabelFromLabelable = async (
@@ -145,13 +111,47 @@ export const removeLabelFromLabelable = async (
   }
 ) => {
   const query = `
-    mutation {
-      removeLabelsFromLabelable(input: {labelIds: ["${labelId}"], labelableId: "${labelableId}"}) {
-        clientMutationId
-      }
-    }`
+  mutation {
+    removeLabelsFromLabelable(input: {labelIds: ["${labelId}"], labelableId: "${labelableId}"}) {
+      clientMutationId
+    }
+  }`
 
-  return octokit.graphql(query, {
-    headers: {Accept: 'application/vnd.github.starfire-preview+json'}
+  return octokit.graphql(query)
+}
+
+export const hasSoftChanges = async (
+  octokit: InstanceType<typeof GitHub>,
+  context: Context,
+  pullRequest: IGithubPRNode
+): Promise<boolean> => {
+  const head = await octokit.pulls.listFiles({
+    ...context.repo,
+    pull_number: pullRequest.node.number
   })
+
+  const mergeCommit = await octokit.repos.getCommit({
+    ...context.repo,
+    ref: pullRequest.node.potentialMergeCommit.oid
+  })
+
+  const prChangedFiles = head.data
+  const mergeChangedFiles = mergeCommit.data?.files
+
+  if (typeof mergeChangedFiles === 'undefined') {
+    throw new Error(`#${pullRequest.node.number} has a merge commit with an unknown diff!`)
+  }
+
+  if (prChangedFiles.length !== mergeChangedFiles.length) {
+    return true // I'd be shocked if it was not!
+  }
+
+  // TODO: There's an assumption the files list should always be ordered the same which needs to be verified.
+  prChangedFiles.forEach((diff, index) => {
+    if (diff.sha !== mergeChangedFiles[index].sha) {
+      return true
+    }
+  })
+
+  return false
 }
