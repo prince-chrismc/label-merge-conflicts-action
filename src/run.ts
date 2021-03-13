@@ -1,6 +1,6 @@
 import * as core from '@actions/core'
 import * as github from '@actions/github'
-import {getLabels, hasSoftChanges} from './queries'
+import {getLabels, hasMergeChanges} from './queries'
 import {findLabelByName} from './util'
 import {gatherPullRequests} from './pulls'
 import {labelPullRequest, labelPullRequestWithHardConflicts} from './label'
@@ -15,8 +15,8 @@ export async function run(): Promise<void> {
     const waitMs = parseInt(core.getInput('wait_ms'), 10)
     core.debug(`maxRetries=${maxRetries}; waitMs=${waitMs}`)
 
-    const detectSoftChanges = core.getInput('detected_soft_changes') === 'true'
-    core.debug(`detectSoftChanges=${detectSoftChanges}`)
+    const detectMergeChanges = core.getInput('detect_merge_changes') === 'true'
+    core.debug(`detectMergeChanges=${detectMergeChanges}`)
 
     // Get the label to use
     const conflictLabel = findLabelByName(
@@ -29,19 +29,19 @@ export async function run(): Promise<void> {
     core.endGroup()
 
     core.startGroup('🏷️ Updating labels')
-    if (!detectSoftChanges) {
+    if (!detectMergeChanges) {
       for (const pullRequest of pullRequests) {
         await labelPullRequest(octokit, pullRequest, conflictLabel)
       }
     } else {
-      const hardConflicts = pullRequests.filter(pr => pr.node.mergeable === 'CONFLICTING')
-      for (const pullRequest of hardConflicts) {
+      const conflicts = pullRequests.filter(pr => pr.node.mergeable === 'CONFLICTING')
+      for (const pullRequest of conflicts) {
         await labelPullRequestWithHardConflicts(octokit, pullRequest, conflictLabel)
       }
 
       const mergeable = pullRequests.filter(pr => pr.node.mergeable === 'MERGEABLE')
       for (const pullRequest of mergeable) {
-        if (await hasSoftChanges(octokit, github.context, pullRequest)) {
+        if (await hasMergeChanges(octokit, github.context, pullRequest)) {
           await labelPullRequestWithHardConflicts(octokit, pullRequest, conflictLabel)
         } else {
           // TODO: the label should be removed!

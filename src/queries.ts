@@ -120,7 +120,7 @@ export const removeLabelFromLabelable = async (
   return octokit.graphql(query)
 }
 
-export const hasSoftChanges = async (
+export const hasMergeChanges = async (
   octokit: InstanceType<typeof GitHub>,
   context: Context,
   pullRequest: IGithubPRNode
