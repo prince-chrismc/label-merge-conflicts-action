@@ -53,4 +53,4 @@ jobs:
 
 ## FAQ - What are _Merge Changes_?
 
-During a merge, given any [strategy](https://git-scm.com/docs/merge-strategies), there may inadvertantly be changes that introduce inconsistency. For example, it may result in code that is no longer syntactically correct or checksums to be out of data. Identifing thesee, in many cases is advantageous.
+During a merge, no matter the [strategy](https://git-scm.com/docs/merge-strategies), there may inadvertently be changes which can have negative side effects. For example, it may result in code that is no longer syntactically correct or checksums to be out of date.
