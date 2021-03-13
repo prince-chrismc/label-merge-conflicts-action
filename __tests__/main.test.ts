@@ -817,7 +817,7 @@ describe('queries', () => {
         }
       }
 
-      it('returns no when list size is different', async () => {
+      it('returns yes when list size is different', async () => {
         const scope = nock('https://api.github.com', {
           reqheaders: {
             authorization: 'token justafaketoken'
@@ -836,25 +836,20 @@ describe('queries', () => {
         expect(changed).toBe(true)
       })
 
-      it('returns no when a sha is different', async () => {
+      it('returns yes when a sha is different', async () => {
         const scope = nock('https://api.github.com', {
           reqheaders: {
             authorization: 'token justafaketoken'
           }
         })
           .get(`/repos/${github.context.repo.owner}/${github.context.repo.repo}/pulls/${prNode.node.number}/files`)
-          .reply(200, changes)
+          .reply(200, [changes[0]])
           .get(
             `/repos/${github.context.repo.owner}/${github.context.repo.repo}/commits/${prNode.node.potentialMergeCommit.oid}`
           )
           .reply(
             200,
-            makeCommitPage({
-              sha: 'sdgfjp43yt3784fbdvb alevb p7yqf37f',
-              filename: 'recipes/protobuf/all/conandata.yml',
-              patch:
-                '@@ -20,6 +20,17 @@ patches:\n       base_path: "source_subfolder"\n     - patch_file: "patches/upstream-issue-7567-no-exp...'
-            })
+            makeCommitPage(changes[1])
           )
 
         const octokit = github.getOctokit('justafaketoken')
@@ -863,7 +858,7 @@ describe('queries', () => {
         expect(changed).toBe(true)
       })
 
-      it('returns no when a sha is different', async () => {
+      it('returns no when everythign matches', async () => {
         const scope = nock('https://api.github.com', {
           reqheaders: {
             authorization: 'token justafaketoken'

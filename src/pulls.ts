@@ -61,12 +61,12 @@ export const checkPullRequestForMergeChanges = async (
   }
 
   // TODO: There's an assumption the files list should always be ordered the same which needs to be verified.
-  prChangedFiles.forEach((diff, index) => {
-    if (diff.sha !== mergeChangedFiles[index].sha) {
+  for (let i = 0; i < prChangedFiles.length; i++) {
+    if (prChangedFiles[i].sha !== mergeChangedFiles[i].sha) {
       core.info(`#${pullRequest.node.number} has a mismatching SHA's`)
       return true
     }
-  })
+  }
 
   return false
 }
