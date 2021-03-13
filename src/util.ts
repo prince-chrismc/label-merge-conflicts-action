@@ -6,10 +6,12 @@ export function getPullrequestsWithoutMergeStatus(pullrequests: IGithubPRNode[])
   })
 }
 
-export function isAlreadyLabeled(pullrequest: IGithubPRNode, label: IGithubLabelNode) {
-  return pullrequest.node.labels.edges.find((l: IGithubLabelNode) => {
-    return l.node.id === label.node.id
-  })
+export function isAlreadyLabeled(pullrequest: IGithubPRNode, label: IGithubLabelNode): boolean {
+  return (
+    pullrequest.node.labels.edges.find((l: IGithubLabelNode) => {
+      return l.node.id === label.node.id
+    }) != undefined
+  )
 }
 
 export function findLabelByName(labelData: IGithubRepoLabels, labelName: string): IGithubLabelNode {

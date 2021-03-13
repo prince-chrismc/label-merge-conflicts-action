@@ -40,3 +40,8 @@ export interface IGithubRepoPullRequets {
     }
   }
 }
+
+export interface IGitHubFileChange {
+  sha: string
+  filename: string
+}

@@ -1,9 +1,9 @@
 import * as core from '@actions/core'
 import * as github from '@actions/github'
-import {getLabels, hasMergeChanges} from './queries'
+import {getLabels} from './queries'
 import {findLabelByName} from './util'
 import {gatherPullRequests} from './pulls'
-import {labelPullRequest, labelPullRequestWithHardConflicts} from './label'
+import {updatePullRequestConflictLabel} from './label'
 
 export async function run(): Promise<void> {
   try {
@@ -29,24 +29,8 @@ export async function run(): Promise<void> {
     core.endGroup()
 
     core.startGroup('🏷️ Updating labels')
-    if (!detectMergeChanges) {
-      for (const pullRequest of pullRequests) {
-        await labelPullRequest(octokit, pullRequest, conflictLabel)
-      }
-    } else {
-      const conflicts = pullRequests.filter(pr => pr.node.mergeable === 'CONFLICTING')
-      for (const pullRequest of conflicts) {
-        await labelPullRequestWithHardConflicts(octokit, pullRequest, conflictLabel)
-      }
-
-      const mergeable = pullRequests.filter(pr => pr.node.mergeable === 'MERGEABLE')
-      for (const pullRequest of mergeable) {
-        if (await hasMergeChanges(octokit, github.context, pullRequest)) {
-          await labelPullRequestWithHardConflicts(octokit, pullRequest, conflictLabel)
-        } else {
-          // TODO: the label should be removed!
-        }
-      }
+    for (const pullRequest of pullRequests) {
+      await updatePullRequestConflictLabel(octokit, github.context, pullRequest, conflictLabel, detectMergeChanges)
     }
     core.endGroup()
   } catch (error) {

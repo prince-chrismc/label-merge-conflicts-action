@@ -4,7 +4,7 @@ import {GitHub} from '@actions/github/lib/utils'
 
 import {IGithubPRNode} from './interfaces'
 import {wait} from './wait'
-import {getPullRequests} from './queries'
+import {getCommitChanges, getPullRequestChanges, getPullRequests} from './queries'
 import {getPullrequestsWithoutMergeStatus} from './util'
 
 // fetch PRs up to $maxRetries times
@@ -45,4 +45,28 @@ export async function gatherPullRequests(
   }
 
   return pullRequests
+}
+
+export const checkPullRequestForMergeChanges = async (
+  octokit: InstanceType<typeof GitHub>,
+  context: Context,
+  pullRequest: IGithubPRNode
+): Promise<boolean> => {
+  const prChangedFiles = await getPullRequestChanges(octokit, context, pullRequest.node.number)
+  const mergeChangedFiles = await getCommitChanges(octokit, context, pullRequest.node.potentialMergeCommit.oid)
+
+  if (prChangedFiles.length !== mergeChangedFiles.length) {
+    core.info(`#${pullRequest.node.number} has a difference in the number of files`)
+    return true // I'd be shocked if it was not!
+  }
+
+  // TODO: There's an assumption the files list should always be ordered the same which needs to be verified.
+  prChangedFiles.forEach((diff, index) => {
+    if (diff.sha !== mergeChangedFiles[index].sha) {
+      core.info(`#${pullRequest.node.number} has a mismatching SHA's`)
+      return true
+    }
+  })
+
+  return false
 }

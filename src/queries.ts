@@ -1,6 +1,6 @@
 import {Context} from '@actions/github/lib/context'
 import {GitHub} from '@actions/github/lib/utils'
-import {IGithubPRNode, IGithubRepoLabels, IGithubRepoPullRequets} from './interfaces'
+import {IGithubPRNode, IGithubRepoLabels, IGithubRepoPullRequets, IGitHubFileChange} from './interfaces'
 
 const getPullRequestPages = async (
   octokit: InstanceType<typeof GitHub>,
@@ -120,38 +120,32 @@ export const removeLabelFromLabelable = async (
   return octokit.graphql(query)
 }
 
-export const hasMergeChanges = async (
+export const getPullRequestChanges = async (
   octokit: InstanceType<typeof GitHub>,
   context: Context,
-  pullRequest: IGithubPRNode
-): Promise<boolean> => {
+  pullRequestnumber: number
+): Promise<IGitHubFileChange[]> => {
   const head = await octokit.pulls.listFiles({
     ...context.repo,
-    pull_number: pullRequest.node.number
+    pull_number: pullRequestnumber
   })
 
+  return head.data
+}
+
+export const getCommitChanges = async (
+  octokit: InstanceType<typeof GitHub>,
+  context: Context,
+  sha: string
+): Promise<IGitHubFileChange[]> => {
   const mergeCommit = await octokit.repos.getCommit({
     ...context.repo,
-    ref: pullRequest.node.potentialMergeCommit.oid
+    ref: sha
   })
 
-  const prChangedFiles = head.data
-  const mergeChangedFiles = mergeCommit.data?.files
-
-  if (typeof mergeChangedFiles === 'undefined') {
-    throw new Error(`#${pullRequest.node.number} has a merge commit with an unknown diff!`)
+  if (typeof mergeCommit.data.files === 'undefined') {
+    throw new Error(`merge commit with an unknown diff!`)
   }
 
-  if (prChangedFiles.length !== mergeChangedFiles.length) {
-    return true // I'd be shocked if it was not!
-  }
-
-  // TODO: There's an assumption the files list should always be ordered the same which needs to be verified.
-  prChangedFiles.forEach((diff, index) => {
-    if (diff.sha !== mergeChangedFiles[index].sha) {
-      return true
-    }
-  })
-
-  return false
+  return mergeCommit.data.files as IGitHubFileChange[]
 }
