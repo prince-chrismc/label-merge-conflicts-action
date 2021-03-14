@@ -127,7 +127,7 @@ export const getPullRequestChanges = async (
 ): Promise<IGitHubFileChange[]> => {
   const head = await octokit.pulls.listFiles({
     ...context.repo,
-    pull_number: pullRequestnumber
+    pull_number: pullRequestnumber // eslint-disable-line camelcase
   })
 
   return head.data

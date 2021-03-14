@@ -7,14 +7,14 @@ import {checkPullRequestForMergeChanges} from './pulls'
 import {addLabelToLabelable, removeLabelFromLabelable} from './queries'
 import {isAlreadyLabeled} from './util'
 
-interface labelable {
+interface Labelable {
   labelId: string
   labelableId: string
 }
 
 async function applyLabelable(
   octokit: InstanceType<typeof GitHub>,
-  labelable: labelable,
+  labelable: Labelable,
   hasLabel: boolean,
   pullRequestNumber: number
 ) {
@@ -35,7 +35,7 @@ export async function updatePullRequestConflictLabel(
   detectMergeChanges: boolean
 ): Promise<void> {
   const hasLabel = isAlreadyLabeled(pullRequest, conflictLabel)
-  const labelable: labelable = {labelId: conflictLabel.node.id, labelableId: pullRequest.node.id}
+  const labelable: Labelable = {labelId: conflictLabel.node.id, labelableId: pullRequest.node.id}
 
   switch (pullRequest.node.mergeable) {
     case 'CONFLICTING':

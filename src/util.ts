@@ -10,7 +10,7 @@ export function isAlreadyLabeled(pullrequest: IGithubPRNode, label: IGithubLabel
   return (
     pullrequest.node.labels.edges.find((l: IGithubLabelNode) => {
       return l.node.id === label.node.id
-    }) != undefined
+    }) !== undefined
   )
 }
 
