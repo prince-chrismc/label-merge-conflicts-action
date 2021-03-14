@@ -847,10 +847,7 @@ describe('queries', () => {
           .get(
             `/repos/${github.context.repo.owner}/${github.context.repo.repo}/commits/${prNode.node.potentialMergeCommit.oid}`
           )
-          .reply(
-            200,
-            makeCommitPage(changes[1])
-          )
+          .reply(200, makeCommitPage(changes[1]))
 
         const octokit = github.getOctokit('justafaketoken')
         const changed = await checkPullRequestForMergeChanges(octokit, github.context, prNode)
@@ -879,7 +876,7 @@ describe('queries', () => {
     })
   })
 
-  describe('correctly determines labeling for conflicts only', () => {
+  describe('correctly determines labeling', () => {
     const expectedLabel: IGithubLabelNode = {node: {id: 'MDU6TGFiZWwyNzYwMjE1ODI0', name: 'expected_label'}}
     const makePrNode = (mergeable: string, ...label: IGithubLabelNode[]): IGithubPRNode => {
       return {
@@ -996,6 +993,174 @@ describe('queries', () => {
         await updatePullRequestConflictLabel(octokit, github.context, pullRequest, expectedLabel, false)
 
         expect(mockFunction).not.toBeCalled()
+      })
+    })
+
+    describe('merge changes', () => {
+      it('removes an old label', async () => {
+        const pullRequest: IGithubPRNode = makePrNode('MERGEABLE', expectedLabel)
+        const scope = nock('https://api.github.com', {
+          reqheaders: {
+            authorization: 'token justafaketoken'
+          }
+        })
+          .get(`/repos/${github.context.repo.owner}/${github.context.repo.repo}/pulls/${pullRequest.node.number}/files`)
+          .reply(200, [
+            {
+              sha: 'da207b42e77f336db8f7bad825daa71726ebf649',
+              filename: 'recipes/pango/all/conanfile.py',
+              status: 'modified',
+              patch:
+                '@@ -60,7 +60,7 @@ def requirements(self):\n             self.requires("freetype/2.10.4")\n \n         if self.options.with_fontconfi...'
+            }
+          ])
+          .get(
+            `/repos/${github.context.repo.owner}/${github.context.repo.repo}/commits/${pullRequest.node.potentialMergeCommit.oid}`
+          )
+          .reply(200, {
+            sha: '7ac057b641fec3b2b4a0ccdadb2b7476faca8bf0',
+            node_id: 'MDY6Q29tbWl0MjA0NjcxMjMyOjdhYzA1N2I2NDFmZWMzYjJiNGEwY2NkYWRiMmI3NDc2ZmFjYThiZjA=',
+            commit: {
+              author: {
+                name: 'SSE4',
+                email: 'tomskside@gmail.com',
+                date: '2021-03-14T00:37:50Z'
+              },
+              committer: {
+                name: 'GitHub',
+                email: 'noreply@github.com',
+                date: '2021-03-14T00:37:50Z'
+              },
+              message: 'Merge d66759bedaa040252d0ef66be5655202e324ff6c into c14910196b33ef8b99737078e284171a73418c17'
+            },
+            author: {
+              login: 'SSE4',
+              id: 870236,
+              node_id: 'MDQ6VXNlcjg3MDIzNg=='
+            },
+            committer: {
+              login: 'web-flow',
+              id: 19864447,
+              node_id: 'MDQ6VXNlcjE5ODY0NDQ3'
+            },
+            parents: [
+              {
+                sha: 'c14910196b33ef8b99737078e284171a73418c17'
+              },
+              {
+                sha: 'd66759bedaa040252d0ef66be5655202e324ff6c'
+              }
+            ],
+            files: [
+              {
+                sha: 'da207b42e77f336db8f7bad825daa71726ebf649',
+                filename: 'recipes/pango/all/conanfile.py',
+                status: 'modified',
+                patch:
+                  '@@ -60,7 +60,7 @@ def requirements(self):\n             self.requires("freetype/2.10.4")\n \n         if self.options.with_fontconf...'
+              }
+            ]
+          })
+          .post(
+            '/graphql',
+            /removeLabelsFromLabelable.*{labelIds: \[.*"MDU6TGFiZWwyNzYwMjE1ODI0.*\], labelableId: .*"MDExOlB1bGxSZXF1ZXN0NTc4ODgyNDUw.*"}/
+          )
+          .reply(200, {data: {}})
+
+        const octokit = github.getOctokit('justafaketoken')
+        const removed = updatePullRequestConflictLabel(octokit, github.context, pullRequest, expectedLabel, true)
+
+        await expect(removed).resolves.toBe(undefined)
+      })
+
+      it('removes an old label', async () => {
+        const pullRequest: IGithubPRNode = makePrNode('MERGEABLE', expectedLabel)
+        const scope = nock('https://api.github.com', {
+          reqheaders: {
+            authorization: 'token justafaketoken'
+          }
+        })
+          .get(`/repos/${github.context.repo.owner}/${github.context.repo.repo}/pulls/${pullRequest.node.number}/files`)
+          .reply(200, [
+            {
+              sha: 'e1dde8f65c711ea3bd2a66557650a3606bf37c7f',
+              filename: 'recipes/libwebp/all/conandata.yml',
+              status: 'modified',
+              patch:
+                '@@ -5,6 +5,9 @@ sources:\n   "1.1.0":\n     url: "https://github.com/webmproject/libwebp/archive/v1.1.0.ta...'
+            },
+            {
+              sha: '6c1a86ff50796a44a635a5267ae7322f1c3252d6',
+              filename: 'recipes/libwebp/config.yml',
+              status: 'modified',
+              patch:
+                '@@ -3,3 +3,5 @@ versions:\n     folder: all\n   "1.1.0":\n     folder: all\n+  "1.2.0":\n+    folder: all'
+            }
+          ])
+          .get(
+            `/repos/${github.context.repo.owner}/${github.context.repo.repo}/commits/${pullRequest.node.potentialMergeCommit.oid}`
+          )
+          .reply(200, {
+            sha: 'd98404b1b9ebbc0397da93b81244511ab11867fe',
+            node_id: 'MDY6Q29tbWl0MjA0NjcxMjMyOmQ5ODQwNGIxYjllYmJjMDM5N2RhOTNiODEyNDQ1MTFhYjExODY3ZmU=',
+            commit: {
+              author: {
+                name: 'SpaceIm',
+                email: '30052553+SpaceIm@users.noreply.github.com',
+                date: '2021-03-13T20:07:06Z'
+              },
+              committer: {
+                name: 'GitHub',
+                email: 'noreply@github.com',
+                date: '2021-03-13T20:07:06Z'
+              },
+              message: 'Merge 4e3af1d3e958c8ad18c374d5254a52501980432d into c14910196b33ef8b99737078e284171a73418c17'
+            },
+            author: {
+              login: 'SpaceIm',
+              id: 30052553,
+              node_id: 'MDQ6VXNlcjMwMDUyNTUz'
+            },
+            committer: {
+              login: 'web-flow',
+              id: 19864447,
+              node_id: 'MDQ6VXNlcjE5ODY0NDQ3'
+            },
+            parents: [
+              {
+                sha: 'c14910196b33ef8b99737078e284171a73418c17'
+              },
+              {
+                sha: '4e3af1d3e958c8ad18c374d5254a52501980432d'
+              }
+            ],
+            files: [
+              {
+                sha: 'e1dde8f65c711ea3bd2a66557650a3606bf37c7f',
+                filename: 'recipes/libwebp/all/conandata.yml',
+                status: 'modified',
+                patch:
+                  '@@ -5,6 +5,9 @@ sources:\n   "1.1.0":\n     url: "https://github.com/webmproject/libwebp/archive/v1.1.0.ta...'
+              },
+              {
+                sha: '6c1a86ff50796a44b635a5267ae7322f1c3252d6',
+                filename: 'recipes/libwebp/config.yml',
+                status: 'modified',
+                patch:
+                  '@@ -3,3 +3,5 @@ versions:\n     folder: all\n   "1.1.0":\n     folder: all\n+  "1.2.0":\n+    folder: all'
+              }
+            ]
+          })
+          .post(
+            '/graphql',
+            /addLabelsToLabelable.*{labelIds: \[.*"MDU6TGFiZWwyNzYwMjE1ODI0.*\], labelableId: .*"MDExOlB1bGxSZXF1ZXN0NTc4ODgyNDUw.*"}/
+          )
+          .reply(200, {data: {}})
+
+        const octokit = github.getOctokit('justafaketoken')
+        const add = updatePullRequestConflictLabel(octokit, github.context, pullRequest, expectedLabel, true)
+
+        await expect(add).resolves.toBe(undefined)
       })
     })
 
