@@ -7,9 +7,10 @@ const getPullRequestPages = async (
   context: Context,
   cursor?: string
 ): Promise<IGithubRepoPullRequets> => {
+  const after = `, after: "${cursor}"`
   const query = `{
     repository(owner: "${context.repo.owner}", name: "${context.repo.repo}") {
-      pullRequests(first: 100, states: OPEN, after: "${cursor ? cursor : null}") {
+      pullRequests(first: 100, states: OPEN ${cursor ? after : ''}) {
         edges {
           node {
             id

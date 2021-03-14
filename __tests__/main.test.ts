@@ -268,8 +268,7 @@ describe('queries', () => {
                       number: 7,
                       mergeable: 'MERGEABLE',
                       labels: {edges: []}
-                    },
-                    cursor: 'Y3Vyc29yOnYyOpHOIoELkg=='
+                    }
                   }
                 ],
                 pageInfo: {endCursor: 'Y3Vyc29yOnYyOpHOIoELkg==', hasNextPage: false}
@@ -306,16 +305,15 @@ describe('queries', () => {
                       number: 7,
                       mergeable: 'MERGEABLE',
                       labels: {edges: []}
-                    },
-                    cursor: 'Y3Vyc29yOnYyOpHOIoELkg=='
+                    }
                   }
                 ],
-                pageInfo: {endCursor: 'dfgsdfhgsdghfgh==', hasNextPage: true}
+                pageInfo: {endCursor: 'Y3Vyc29yOnYyOpHOGktShA==', hasNextPage: true}
               }
             }
           }
         })
-        .post('/graphql')
+        .post('/graphql', /Y3Vyc29yOnYyOpHOGktShA==/)
         .reply(200, {
           data: {
             repository: {
@@ -327,11 +325,10 @@ describe('queries', () => {
                       number: 64,
                       mergeable: 'MERGEABLE',
                       labels: {edges: []}
-                    },
-                    cursor: 'dfgsdfhgsdghfgh=='
+                    }
                   }
                 ],
-                pageInfo: {endCursor: 'dfgsdfhgsdghfgh==', hasNextPage: false}
+                pageInfo: {endCursor: 'Y3Vyc29yOnYyOpHOGktShA==', hasNextPage: false}
               }
             }
           }
@@ -370,8 +367,7 @@ describe('queries', () => {
                       number: 7,
                       mergeable: 'UNKNOWN',
                       labels: {edges: []}
-                    },
-                    cursor: 'Y3Vyc29yOnYyOpHOIoELkg=='
+                    }
                   },
                   {
                     node: {
@@ -379,11 +375,10 @@ describe('queries', () => {
                       number: 64,
                       mergeable: 'MERGEABLE',
                       labels: {edges: []}
-                    },
-                    cursor: 'dfgsdfhgsdghfgh=='
+                    }
                   }
                 ],
-                pageInfo: {endCursor: 'dfgsdfhgsdghfgh==', hasNextPage: false}
+                pageInfo: {endCursor: 'Y3Vyc29yOnYyOpHOGktShA==', hasNextPage: false}
               }
             }
           }
@@ -400,8 +395,7 @@ describe('queries', () => {
                       number: 7,
                       mergeable: 'MERGEABLE',
                       labels: {edges: []}
-                    },
-                    cursor: 'Y3Vyc29yOnYyOpHOIoELkg=='
+                    }
                   },
                   {
                     node: {
@@ -409,11 +403,10 @@ describe('queries', () => {
                       number: 64,
                       mergeable: 'MERGEABLE',
                       labels: {edges: []}
-                    },
-                    cursor: 'dfgsdfhgsdghfgh=='
+                    }
                   }
                 ],
-                pageInfo: {endCursor: 'dfgsdfhgsdghfgh==', hasNextPage: false}
+                pageInfo: {endCursor: 'Y3Vyc29yOnYyOpHOGktShA==', hasNextPage: false}
               }
             }
           }
@@ -454,8 +447,7 @@ describe('queries', () => {
                     number: 7,
                     mergeable: 'UNKNOWN',
                     labels: {edges: []}
-                  },
-                  cursor: 'Y3Vyc29yOnYyOpHOIoELkg=='
+                  }
                 },
                 {
                   node: {
@@ -463,11 +455,10 @@ describe('queries', () => {
                     number: 64,
                     mergeable: 'MERGEABLE',
                     labels: {edges: []}
-                  },
-                  cursor: 'dfgsdfhgsdghfgh=='
+                  }
                 }
               ],
-              pageInfo: {endCursor: 'dfgsdfhgsdghfgh==', hasNextPage: false}
+              pageInfo: {endCursor: 'Y3Vyc29yOnYyOpHOGktShA==', hasNextPage: false}
             }
           }
         }
@@ -1194,24 +1185,55 @@ describe('queries', () => {
                 edges: [
                   {
                     node: {
-                      id: 'MDExOlB1bGxSZXF1ZXN0NTc4ODgyNDUw',
-                      number: 7,
+                      id: 'MDExOlB1bGxSZXF1ZXN0NDQzNTg3NjI1',
+                      number: 2109,
                       mergeable: 'UNKNOWN',
-                      labels: {edges: []}
-                    },
-                    cursor: 'Y3Vyc29yOnYyOpHOIoELkg=='
+                      potentialMergeCommit: {
+                        oid: 'dbe715994ec0bd51813f9e2b3e250c3e6b7dcf30'
+                      },
+                      labels: {
+                        edges: [
+                          {
+                            node: {
+                              id: 'MDU6TGFiZWwxNTI3NTYzMTMy',
+                              name: 'Failed'
+                            }
+                          }
+                        ]
+                      }
+                    }
                   },
                   {
                     node: {
-                      id: 'justsomestring',
-                      number: 64,
+                      id: 'MDExOlB1bGxSZXF1ZXN0NDYxODY4OTkz',
+                      number: 2370,
                       mergeable: 'MERGEABLE',
-                      labels: {edges: []}
-                    },
-                    cursor: 'dfgsdfhgsdghfgh=='
+                      potentialMergeCommit: {
+                        oid: 'cdb96fa3e8b19bb280fec137bd26a8144fdabeac'
+                      },
+                      labels: {
+                        edges: [
+                          {
+                            node: {
+                              id: 'MDU6TGFiZWwxNTI3NTYzMTMy',
+                              name: 'Failed'
+                            }
+                          },
+                          {
+                            node: {
+                              id: 'MDU6TGFiZWwxNjMxNDkxOTY1',
+                              name: 'blocked'
+                            }
+                          }
+                        ]
+                      }
+                    }
                   }
                 ],
-                pageInfo: {endCursor: 'dfgsdfhgsdghfgh==', hasNextPage: false}
+                pageInfo: {
+                  endCursor: 'Y3Vyc29yOnYyOpHOG4ePwQ==',
+                  hasNextPage: false
+                }
               }
             }
           }
@@ -1224,31 +1246,62 @@ describe('queries', () => {
                 edges: [
                   {
                     node: {
-                      id: 'MDExOlB1bGxSZXF1ZXN0NTc4ODgyNDUw',
-                      number: 7,
+                      id: 'MDExOlB1bGxSZXF1ZXN0NDQzNTg3NjI1',
+                      number: 2109,
                       mergeable: 'CONFLICTING',
-                      labels: {edges: []}
-                    },
-                    cursor: 'Y3Vyc29yOnYyOpHOIoELkg=='
+                      potentialMergeCommit: {
+                        oid: 'dbe715994ec0bd51813f9e2b3e250c3e6b7dcf30'
+                      },
+                      labels: {
+                        edges: [
+                          {
+                            node: {
+                              id: 'MDU6TGFiZWwxNTI3NTYzMTMy',
+                              name: 'Failed'
+                            }
+                          }
+                        ]
+                      }
+                    }
                   },
                   {
                     node: {
-                      id: 'justsomestring',
-                      number: 64,
+                      id: 'MDExOlB1bGxSZXF1ZXN0NDYxODY4OTkz',
+                      number: 2370,
                       mergeable: 'MERGEABLE',
-                      labels: {edges: []}
-                    },
-                    cursor: 'dfgsdfhgsdghfgh=='
+                      potentialMergeCommit: {
+                        oid: 'cdb96fa3e8b19bb280fec137bd26a8144fdabeac'
+                      },
+                      labels: {
+                        edges: [
+                          {
+                            node: {
+                              id: 'MDU6TGFiZWwxNTI3NTYzMTMy',
+                              name: 'Failed'
+                            }
+                          },
+                          {
+                            node: {
+                              id: 'MDU6TGFiZWwxNjMxNDkxOTY1',
+                              name: 'blocked'
+                            }
+                          }
+                        ]
+                      }
+                    }
                   }
                 ],
-                pageInfo: {endCursor: 'dfgsdfhgsdghfgh==', hasNextPage: false}
+                pageInfo: {
+                  endCursor: 'Y3Vyc29yOnYyOpHOG4ePwQ==',
+                  hasNextPage: false
+                }
               }
             }
           }
         })
         .post(
           '/graphql',
-          /addLabelsToLabelable.*{labelIds: \[.*"MDU6TGFiZWwyNzYwMjE1ODI0.*\], labelableId: .*"MDExOlB1bGxSZXF1ZXN0NTc4ODgyNDUw.*"}/
+          /addLabelsToLabelable.*{labelIds: \[.*"MDU6TGFiZWwyNzYwMjE1ODI0.*\], labelableId: .*"MDExOlB1bGxSZXF1ZXN0NDQzNTg3NjI1.*"}/
         )
         .reply(200, {data: {}})
 

@@ -199,9 +199,10 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.getCommitChanges = exports.getPullRequestChanges = exports.removeLabelFromLabelable = exports.addLabelToLabelable = exports.getLabels = exports.getPullRequests = void 0;
 const getPullRequestPages = (octokit, context, cursor) => __awaiter(void 0, void 0, void 0, function* () {
+    const after = `, after: "${cursor}"`;
     const query = `{
     repository(owner: "${context.repo.owner}", name: "${context.repo.repo}") {
-      pullRequests(first: 100, states: OPEN, after: "${cursor ? cursor : null}") {
+      pullRequests(first: 100, states: OPEN ${cursor ? after : ''}) {
         edges {
           node {
             id
@@ -2461,7 +2462,7 @@ exports.withCustomRequest = withCustomRequest;
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 
-const VERSION = "2.13.1";
+const VERSION = "2.13.2";
 
 /**
  * Some “list” response that can be paginated have a different response structure
