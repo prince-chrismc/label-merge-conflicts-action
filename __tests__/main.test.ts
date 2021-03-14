@@ -581,7 +581,7 @@ describe('queries', () => {
             authorization: 'token justafaketoken'
           }
         })
-          .get(`/repos/${github.context.repo.owner}/${github.context.repo.repo}/pulls/123/files`)
+          .get(`/repos/${github.context.repo.owner}/${github.context.repo.repo}/pulls/123/files?per_page=300`)
           .reply(200, [
             {
               sha: 'a8f3b51f97dbe31d1da584262e01b3ac2465d2d8',
@@ -613,7 +613,7 @@ describe('queries', () => {
             authorization: 'token justafaketoken'
           }
         })
-          .get(`/repos/${github.context.repo.owner}/${github.context.repo.repo}/pulls/123/files`)
+          .get(`/repos/${github.context.repo.owner}/${github.context.repo.repo}/pulls/123/files?per_page=300`)
           .reply(404, {
             message: 'Not Found',
             documentation_url: 'https://docs.github.com/rest/reference/pulls#list-pull-requests-files'
@@ -814,7 +814,7 @@ describe('queries', () => {
             authorization: 'token justafaketoken'
           }
         })
-          .get(`/repos/${github.context.repo.owner}/${github.context.repo.repo}/pulls/${prNode.node.number}/files`)
+          .get(`/repos/${github.context.repo.owner}/${github.context.repo.repo}/pulls/${prNode.node.number}/files?per_page=300`)
           .reply(200, changes)
           .get(
             `/repos/${github.context.repo.owner}/${github.context.repo.repo}/commits/${prNode.node.potentialMergeCommit.oid}`
@@ -833,7 +833,7 @@ describe('queries', () => {
             authorization: 'token justafaketoken'
           }
         })
-          .get(`/repos/${github.context.repo.owner}/${github.context.repo.repo}/pulls/${prNode.node.number}/files`)
+          .get(`/repos/${github.context.repo.owner}/${github.context.repo.repo}/pulls/${prNode.node.number}/files?per_page=300`)
           .reply(200, [changes[0]])
           .get(
             `/repos/${github.context.repo.owner}/${github.context.repo.repo}/commits/${prNode.node.potentialMergeCommit.oid}`
@@ -852,7 +852,7 @@ describe('queries', () => {
             authorization: 'token justafaketoken'
           }
         })
-          .get(`/repos/${github.context.repo.owner}/${github.context.repo.repo}/pulls/${prNode.node.number}/files`)
+          .get(`/repos/${github.context.repo.owner}/${github.context.repo.repo}/pulls/${prNode.node.number}/files?per_page=300`)
           .reply(200, changes)
           .get(
             `/repos/${github.context.repo.owner}/${github.context.repo.repo}/commits/${prNode.node.potentialMergeCommit.oid}`
@@ -995,7 +995,7 @@ describe('queries', () => {
             authorization: 'token justafaketoken'
           }
         })
-          .get(`/repos/${github.context.repo.owner}/${github.context.repo.repo}/pulls/${pullRequest.node.number}/files`)
+          .get(`/repos/${github.context.repo.owner}/${github.context.repo.repo}/pulls/${pullRequest.node.number}/files?per_page=300`)
           .reply(200, [
             {
               sha: 'da207b42e77f336db8f7bad825daa71726ebf649',
@@ -1071,7 +1071,7 @@ describe('queries', () => {
             authorization: 'token justafaketoken'
           }
         })
-          .get(`/repos/${github.context.repo.owner}/${github.context.repo.repo}/pulls/${pullRequest.node.number}/files`)
+          .get(`/repos/${github.context.repo.owner}/${github.context.repo.repo}/pulls/${pullRequest.node.number}/files?per_page=300`)
           .reply(200, [
             {
               sha: 'e1dde8f65c711ea3bd2a66557650a3606bf37c7f',
