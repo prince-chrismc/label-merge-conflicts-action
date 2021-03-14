@@ -2,8 +2,8 @@ name: "Label Merge Conflicts"
 description: 'Github Action to automatically label PRs with a "conflict" label'
 author: "prince-chrismc"
 branding:
-  icon: "alert-octagon"
-  color: "gray-dark"
+  icon: "alert-triangle"
+  color: "red"
 inputs:
   conflict_label_name:
     description: "label name used to marked PRs with merge conflicts"
@@ -19,6 +19,10 @@ inputs:
     description: "miliseconds between retries"
     required: false
     default: "5000"
+  detect_merge_changes:
+    description: "treat soft changes within the merge commits as conflicts and label accordingly"
+    required: false
+    default: "false"
 runs:
   using: "node12"
   main: "dist/index.js"

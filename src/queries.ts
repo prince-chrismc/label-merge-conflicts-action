@@ -1,72 +1,43 @@
 import {Context} from '@actions/github/lib/context'
 import {GitHub} from '@actions/github/lib/utils'
-import {IGithubPRNode, IGithubRepoLabels, IGithubRepoPullRequets} from './interfaces'
+import {IGithubPRNode, IGithubRepoLabels, IGithubRepoPullRequets, IGitHubFileChange} from './interfaces'
 
 const getPullRequestPages = async (
   octokit: InstanceType<typeof GitHub>,
   context: Context,
   cursor?: string
 ): Promise<IGithubRepoPullRequets> => {
-  let query
-  if (cursor) {
-    query = `{
-      repository(owner: "${context.repo.owner}", name: "${context.repo.repo}") {
-        pullRequests(first: 100, states: OPEN, after: "${cursor}") {
-          edges {
-            node {
-              id
-              number
-              mergeable
-              labels(first: 100) {
-                edges {
-                  node {
-                    id
-                    name
-                  }
+  const after = `, after: "${cursor}"`
+  const query = `{
+    repository(owner: "${context.repo.owner}", name: "${context.repo.repo}") {
+      pullRequests(first: 100, states: OPEN ${cursor ? after : ''}) {
+        edges {
+          node {
+            id
+            number
+            mergeable
+            potentialMergeCommit {
+              oid 
+            }
+            labels(first: 100) {
+              edges {
+                node {
+                  id
+                  name
                 }
               }
             }
-            cursor
-          }
-          pageInfo {
-            endCursor
-            hasNextPage
           }
         }
-      }
-    }`
-  } else {
-    query = `{
-      repository(owner: "${context.repo.owner}", name: "${context.repo.repo}") {
-        pullRequests(first: 100, states: OPEN) {
-          edges {
-            node {
-              id
-              number
-              mergeable
-              labels(first: 100) {
-                edges {
-                  node {
-                    id
-                    name
-                  }
-                }
-              }
-            }
-            cursor
-          }
-          pageInfo {
-            endCursor
-            hasNextPage
-          }
+        pageInfo {
+          endCursor
+          hasNextPage
         }
       }
-    }`
-  }
+    }
+  }`
 
-  return octokit.graphql(query, {
-    headers: {Accept: 'application/vnd.github.ocelot-preview+json'}
-  })
+  return octokit.graphql(query)
 }
 
 // fetch all PRs
@@ -107,9 +78,7 @@ export const getLabels = async (
     }
   }`
 
-  return octokit.graphql(query, {
-    headers: {Accept: 'application/vnd.github.ocelot-preview+json'}
-  })
+  return octokit.graphql(query)
 }
 
 export const addLabelToLabelable = async (
@@ -123,15 +92,13 @@ export const addLabelToLabelable = async (
   }
 ) => {
   const query = `
-    mutation {
-      addLabelsToLabelable(input: {labelIds: ["${labelId}"], labelableId: "${labelableId}"}) {
-        clientMutationId
-      }
-    }`
+  mutation {
+    addLabelsToLabelable(input: {labelIds: ["${labelId}"], labelableId: "${labelableId}"}) {
+      clientMutationId
+    }
+  }`
 
-  return octokit.graphql(query, {
-    headers: {Accept: 'application/vnd.github.starfire-preview+json'}
-  })
+  return octokit.graphql(query)
 }
 
 export const removeLabelFromLabelable = async (
@@ -145,13 +112,52 @@ export const removeLabelFromLabelable = async (
   }
 ) => {
   const query = `
-    mutation {
-      removeLabelsFromLabelable(input: {labelIds: ["${labelId}"], labelableId: "${labelableId}"}) {
-        clientMutationId
-      }
-    }`
+  mutation {
+    removeLabelsFromLabelable(input: {labelIds: ["${labelId}"], labelableId: "${labelableId}"}) {
+      clientMutationId
+    }
+  }`
 
-  return octokit.graphql(query, {
-    headers: {Accept: 'application/vnd.github.starfire-preview+json'}
+  return octokit.graphql(query)
+}
+
+export const getPullRequestChanges = async (
+  octokit: InstanceType<typeof GitHub>,
+  context: Context,
+  pullRequestnumber: number
+): Promise<IGitHubFileChange[]> => {
+  const head = await octokit.pulls.listFiles({
+    ...context.repo,
+    pull_number: pullRequestnumber, // eslint-disable-line camelcase
+    /**
+     * This is correct the different default values which on larger pull requests is an issue.
+     * There is no pagination support.
+     *
+     * https://docs.github.com/en/rest/reference/pulls#list-pull-requests-files
+     * > Responses include a maximum of 3000 files. The paginated response returns 30 files per page by default.
+     *
+     * https://docs.github.com/en/rest/reference/repos#get-a-commit
+     * > If there are more than 300 files in the commit diff, the response will include pagination link headers for the remaining files, up to a limit of 3000 files.
+     */
+    per_page: 300 // eslint-disable-line camelcase
   })
+
+  return head.data
+}
+
+export const getCommitChanges = async (
+  octokit: InstanceType<typeof GitHub>,
+  context: Context,
+  sha: string
+): Promise<IGitHubFileChange[]> => {
+  const mergeCommit = await octokit.repos.getCommit({
+    ...context.repo,
+    ref: sha
+  })
+
+  if (typeof mergeCommit.data.files === 'undefined') {
+    throw new Error(`merge commit with an unknown diff!`)
+  }
+
+  return mergeCommit.data.files as IGitHubFileChange[]
 }

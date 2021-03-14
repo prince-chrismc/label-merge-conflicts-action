@@ -1,4 +1,5 @@
 # Label Pull Requests with Merge Conflicts Automatically
+
 [![MIT](https://img.shields.io/github/license/prince-chrismc/label-merge-conflicts-action)](https://github.com/prince-chrismc/label-merge-conflicts-action/blob/main/LICENSE)
 [![codecov](https://img.shields.io/codecov/c/github/prince-chrismc/label-merge-conflicts-action)](https://codecov.io/gh/prince-chrismc/label-merge-conflicts-action)
 
@@ -38,6 +39,7 @@ jobs:
           # These are optional incase you need to adjust for the limitations described below
           max_retries: 5
           wait_ms: 15000
+          detect_merge_changes: false # or true to handle as conflicts
 ```
 
 ## Limitations
@@ -49,3 +51,7 @@ jobs:
 2. GitHub does not run actions on pull requests which have conflicts
     * When there is a conflict it prevents the merge commit from being calculated. [See this thread](https://github.community/t/run-actions-on-pull-requests-with-merge-conflicts/17104).
     * This is required for the [`mergeable`](https://docs.github.com/en/graphql/reference/enums#mergeablestate) as per the [API documentation](https://docs.github.com/en/rest/reference/pulls#get-a-pull-request)
+
+## FAQ - What are _Merge Changes_?
+
+During a merge, no matter the [strategy](https://git-scm.com/docs/merge-strategies), there may inadvertently be changes which can have negative side effects. For example, it may result in code that is no longer syntactically correct or checksums to be out of date.
