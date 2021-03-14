@@ -16,8 +16,11 @@ export interface IGithubRepoLabels {
 export interface IGithubPRNode {
   node: {
     id: string
-    number: string
+    number: number
     mergeable: string
+    potentialMergeCommit: {
+      oid: string
+    }
     labels: {
       edges: IGithubLabelNode[]
     }
@@ -36,4 +39,9 @@ export interface IGithubRepoPullRequets {
       pageInfo: IGithubPageInfo
     }
   }
+}
+
+export interface IGitHubFileChange {
+  sha: string
+  filename: string
 }

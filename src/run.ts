@@ -3,7 +3,7 @@ import * as github from '@actions/github'
 import {getLabels} from './queries'
 import {findLabelByName} from './util'
 import {gatherPullRequests} from './pulls'
-import {labelPullRequest} from './label'
+import {updatePullRequestConflictLabel} from './label'
 
 export async function run(): Promise<void> {
   try {
@@ -14,6 +14,9 @@ export async function run(): Promise<void> {
     const maxRetries = parseInt(core.getInput('max_retries'), 10) || 1 // Force invalid inputs to a 1
     const waitMs = parseInt(core.getInput('wait_ms'), 10)
     core.debug(`maxRetries=${maxRetries}; waitMs=${waitMs}`)
+
+    const detectMergeChanges = core.getInput('detect_merge_changes') === 'true'
+    core.debug(`detectMergeChanges=${detectMergeChanges}`)
 
     // Get the label to use
     const conflictLabel = findLabelByName(
@@ -27,7 +30,7 @@ export async function run(): Promise<void> {
 
     core.startGroup('🏷️ Updating labels')
     for (const pullRequest of pullRequests) {
-      await labelPullRequest(octokit, pullRequest, conflictLabel)
+      await updatePullRequestConflictLabel(octokit, github.context, pullRequest, conflictLabel, detectMergeChanges)
     }
     core.endGroup()
   } catch (error) {

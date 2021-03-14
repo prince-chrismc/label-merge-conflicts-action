@@ -36,26 +36,36 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.labelPullRequest = void 0;
+exports.updatePullRequestConflictLabel = void 0;
 const core = __importStar(__nccwpck_require__(2186));
+const pulls_1 = __nccwpck_require__(1316);
 const queries_1 = __nccwpck_require__(775);
 const util_1 = __nccwpck_require__(4024);
-function labelPullRequest(octokit, pullRequest, conflictLabel) {
+function applyLabelable(octokit, labelable, hasLabel, pullRequestNumber) {
+    return __awaiter(this, void 0, void 0, function* () {
+        if (hasLabel) {
+            core.debug(`Skipping #${pullRequestNumber}, it is already labeled`);
+            return;
+        }
+        core.info(`Labeling #${pullRequestNumber}...`);
+        yield queries_1.addLabelToLabelable(octokit, labelable);
+    });
+}
+function updatePullRequestConflictLabel(octokit, context, pullRequest, conflictLabel, detectMergeChanges) {
     return __awaiter(this, void 0, void 0, function* () {
         const hasLabel = util_1.isAlreadyLabeled(pullRequest, conflictLabel);
         const labelable = { labelId: conflictLabel.node.id, labelableId: pullRequest.node.id };
         switch (pullRequest.node.mergeable) {
             case 'CONFLICTING':
-                if (hasLabel) {
-                    core.debug(`Skipping PR #${pullRequest.node.number}, it is conflicting but is already labeled`);
-                    break;
-                }
-                core.info(`Labeling PR #${pullRequest.node.number}...`);
-                yield queries_1.addLabelToLabelable(octokit, labelable);
+                yield applyLabelable(octokit, labelable, hasLabel, pullRequest.node.number);
                 break;
             case 'MERGEABLE':
+                if (detectMergeChanges && (yield pulls_1.checkPullRequestForMergeChanges(octokit, context, pullRequest))) {
+                    yield applyLabelable(octokit, labelable, hasLabel, pullRequest.node.number);
+                    break;
+                }
                 if (hasLabel) {
-                    core.info(`Unlabeling PR #${pullRequest.node.number}...`);
+                    core.info(`Unmarking #${pullRequest.node.number}...`);
                     yield queries_1.removeLabelFromLabelable(octokit, labelable);
                 }
                 break;
@@ -64,7 +74,7 @@ function labelPullRequest(octokit, pullRequest, conflictLabel) {
         }
     });
 }
-exports.labelPullRequest = labelPullRequest;
+exports.updatePullRequestConflictLabel = updatePullRequestConflictLabel;
 
 
 /***/ }),
@@ -115,7 +125,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.gatherPullRequests = void 0;
+exports.checkPullRequestForMergeChanges = exports.gatherPullRequests = void 0;
 const core = __importStar(__nccwpck_require__(2186));
 const wait_1 = __nccwpck_require__(5817);
 const queries_1 = __nccwpck_require__(775);
@@ -151,6 +161,23 @@ function gatherPullRequests(octokit, context, waitMs, maxRetries) {
     });
 }
 exports.gatherPullRequests = gatherPullRequests;
+const checkPullRequestForMergeChanges = (octokit, context, pullRequest) => __awaiter(void 0, void 0, void 0, function* () {
+    const prChangedFiles = yield queries_1.getPullRequestChanges(octokit, context, pullRequest.node.number);
+    const mergeChangedFiles = yield queries_1.getCommitChanges(octokit, context, pullRequest.node.potentialMergeCommit.oid);
+    if (prChangedFiles.length !== mergeChangedFiles.length) {
+        core.info(`#${pullRequest.node.number} has a difference in the number of files`);
+        return true; // I'd be shocked if it was not!
+    }
+    // TODO: There's an assumption the files list should always be ordered the same which needs to be verified.
+    for (let i = 0; i < prChangedFiles.length; i++) {
+        if (prChangedFiles[i].sha !== mergeChangedFiles[i].sha) {
+            core.info(`#${pullRequest.node.number} has a mismatching SHA's`);
+            return true;
+        }
+    }
+    return false;
+});
+exports.checkPullRequestForMergeChanges = checkPullRequestForMergeChanges;
 
 
 /***/ }),
@@ -170,68 +197,38 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.removeLabelFromLabelable = exports.addLabelToLabelable = exports.getLabels = exports.getPullRequests = void 0;
+exports.getCommitChanges = exports.getPullRequestChanges = exports.removeLabelFromLabelable = exports.addLabelToLabelable = exports.getLabels = exports.getPullRequests = void 0;
 const getPullRequestPages = (octokit, context, cursor) => __awaiter(void 0, void 0, void 0, function* () {
-    let query;
-    if (cursor) {
-        query = `{
-      repository(owner: "${context.repo.owner}", name: "${context.repo.repo}") {
-        pullRequests(first: 100, states: OPEN, after: "${cursor}") {
-          edges {
-            node {
-              id
-              number
-              mergeable
-              labels(first: 100) {
-                edges {
-                  node {
-                    id
-                    name
-                  }
+    const after = `, after: "${cursor}"`;
+    const query = `{
+    repository(owner: "${context.repo.owner}", name: "${context.repo.repo}") {
+      pullRequests(first: 100, states: OPEN ${cursor ? after : ''}) {
+        edges {
+          node {
+            id
+            number
+            mergeable
+            potentialMergeCommit {
+              oid 
+            }
+            labels(first: 100) {
+              edges {
+                node {
+                  id
+                  name
                 }
               }
             }
-            cursor
-          }
-          pageInfo {
-            endCursor
-            hasNextPage
           }
         }
-      }
-    }`;
-    }
-    else {
-        query = `{
-      repository(owner: "${context.repo.owner}", name: "${context.repo.repo}") {
-        pullRequests(first: 100, states: OPEN) {
-          edges {
-            node {
-              id
-              number
-              mergeable
-              labels(first: 100) {
-                edges {
-                  node {
-                    id
-                    name
-                  }
-                }
-              }
-            }
-            cursor
-          }
-          pageInfo {
-            endCursor
-            hasNextPage
-          }
+        pageInfo {
+          endCursor
+          hasNextPage
         }
       }
-    }`;
     }
-    return octokit.graphql(query, {
-        headers: { Accept: 'application/vnd.github.ocelot-preview+json' }
-    });
+  }`;
+    return octokit.graphql(query);
 });
 // fetch all PRs
 const getPullRequests = (octokit, context) => __awaiter(void 0, void 0, void 0, function* () {
@@ -260,35 +257,54 @@ const getLabels = (octokit, context, labelName) => __awaiter(void 0, void 0, voi
       }
     }
   }`;
-    return octokit.graphql(query, {
-        headers: { Accept: 'application/vnd.github.ocelot-preview+json' }
-    });
+    return octokit.graphql(query);
 });
 exports.getLabels = getLabels;
 const addLabelToLabelable = (octokit, { labelId, labelableId }) => __awaiter(void 0, void 0, void 0, function* () {
     const query = `
-    mutation {
-      addLabelsToLabelable(input: {labelIds: ["${labelId}"], labelableId: "${labelableId}"}) {
-        clientMutationId
-      }
-    }`;
-    return octokit.graphql(query, {
-        headers: { Accept: 'application/vnd.github.starfire-preview+json' }
-    });
+  mutation {
+    addLabelsToLabelable(input: {labelIds: ["${labelId}"], labelableId: "${labelableId}"}) {
+      clientMutationId
+    }
+  }`;
+    return octokit.graphql(query);
 });
 exports.addLabelToLabelable = addLabelToLabelable;
 const removeLabelFromLabelable = (octokit, { labelId, labelableId }) => __awaiter(void 0, void 0, void 0, function* () {
     const query = `
-    mutation {
-      removeLabelsFromLabelable(input: {labelIds: ["${labelId}"], labelableId: "${labelableId}"}) {
-        clientMutationId
-      }
-    }`;
-    return octokit.graphql(query, {
-        headers: { Accept: 'application/vnd.github.starfire-preview+json' }
-    });
+  mutation {
+    removeLabelsFromLabelable(input: {labelIds: ["${labelId}"], labelableId: "${labelableId}"}) {
+      clientMutationId
+    }
+  }`;
+    return octokit.graphql(query);
 });
 exports.removeLabelFromLabelable = removeLabelFromLabelable;
+const getPullRequestChanges = (octokit, context, pullRequestnumber) => __awaiter(void 0, void 0, void 0, function* () {
+    const head = yield octokit.pulls.listFiles(Object.assign(Object.assign({}, context.repo), { pull_number: pullRequestnumber, 
+        /**
+         * This is correct the different default values which on larger pull requests is an issue.
+         * There is no pagination support.
+         *
+         * https://docs.github.com/en/rest/reference/pulls#list-pull-requests-files
+         * > Responses include a maximum of 3000 files. The paginated response returns 30 files per page by default.
+         *
+         * https://docs.github.com/en/rest/reference/repos#get-a-commit
+         * > If there are more than 300 files in the commit diff, the response will include pagination link headers for the remaining files, up to a limit of 3000 files.
+         */
+        per_page: 300 // eslint-disable-line camelcase
+     }));
+    return head.data;
+});
+exports.getPullRequestChanges = getPullRequestChanges;
+const getCommitChanges = (octokit, context, sha) => __awaiter(void 0, void 0, void 0, function* () {
+    const mergeCommit = yield octokit.repos.getCommit(Object.assign(Object.assign({}, context.repo), { ref: sha }));
+    if (typeof mergeCommit.data.files === 'undefined') {
+        throw new Error(`merge commit with an unknown diff!`);
+    }
+    return mergeCommit.data.files;
+});
+exports.getCommitChanges = getCommitChanges;
 
 
 /***/ }),
@@ -343,6 +359,8 @@ function run() {
             const maxRetries = parseInt(core.getInput('max_retries'), 10) || 1; // Force invalid inputs to a 1
             const waitMs = parseInt(core.getInput('wait_ms'), 10);
             core.debug(`maxRetries=${maxRetries}; waitMs=${waitMs}`);
+            const detectMergeChanges = core.getInput('detect_merge_changes') === 'true';
+            core.debug(`detectMergeChanges=${detectMergeChanges}`);
             // Get the label to use
             const conflictLabel = util_1.findLabelByName(yield queries_1.getLabels(octokit, github.context, conflictLabelName), conflictLabelName);
             core.startGroup('🔎 Gather Pull Request Data');
@@ -350,7 +368,7 @@ function run() {
             core.endGroup();
             core.startGroup('🏷️ Updating labels');
             for (const pullRequest of pullRequests) {
-                yield label_1.labelPullRequest(octokit, pullRequest, conflictLabel);
+                yield label_1.updatePullRequestConflictLabel(octokit, github.context, pullRequest, conflictLabel, detectMergeChanges);
             }
             core.endGroup();
         }
@@ -378,9 +396,9 @@ function getPullrequestsWithoutMergeStatus(pullrequests) {
 }
 exports.getPullrequestsWithoutMergeStatus = getPullrequestsWithoutMergeStatus;
 function isAlreadyLabeled(pullrequest, label) {
-    return pullrequest.node.labels.edges.find((l) => {
+    return (pullrequest.node.labels.edges.find((l) => {
         return l.node.id === label.node.id;
-    });
+    }) !== undefined);
 }
 exports.isAlreadyLabeled = isAlreadyLabeled;
 function findLabelByName(labelData, labelName) {
@@ -1746,7 +1764,7 @@ function _objectWithoutProperties(source, excluded) {
   return target;
 }
 
-const VERSION = "3.2.5";
+const VERSION = "3.3.0";
 
 class Octokit {
   constructor(options = {}) {
@@ -1755,6 +1773,7 @@ class Octokit {
       baseUrl: request.request.endpoint.DEFAULTS.baseUrl,
       headers: {},
       request: Object.assign({}, options.request, {
+        // @ts-ignore internal usage only, no need to type
         hook: hook.bind(null, "request")
       }),
       mediaType: {
@@ -2333,7 +2352,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 var request = __nccwpck_require__(6234);
 var universalUserAgent = __nccwpck_require__(5030);
 
-const VERSION = "4.6.0";
+const VERSION = "4.6.1";
 
 class GraphqlError extends Error {
   constructor(request, response) {
@@ -2356,10 +2375,18 @@ class GraphqlError extends Error {
 }
 
 const NON_VARIABLE_OPTIONS = ["method", "baseUrl", "url", "headers", "request", "query", "mediaType"];
+const FORBIDDEN_VARIABLE_OPTIONS = ["query", "method", "url"];
 const GHES_V3_SUFFIX_REGEX = /\/api\/v3\/?$/;
 function graphql(request, query, options) {
-  if (typeof query === "string" && options && "query" in options) {
-    return Promise.reject(new Error(`[@octokit/graphql] "query" cannot be used as variable name`));
+  if (options) {
+    if (typeof query === "string" && "query" in options) {
+      return Promise.reject(new Error(`[@octokit/graphql] "query" cannot be used as variable name`));
+    }
+
+    for (const key in options) {
+      if (!FORBIDDEN_VARIABLE_OPTIONS.includes(key)) continue;
+      return Promise.reject(new Error(`[@octokit/graphql] "${key}" cannot be used as variable name`));
+    }
   }
 
   const parsedOptions = typeof query === "string" ? Object.assign({
@@ -2446,7 +2473,7 @@ exports.withCustomRequest = withCustomRequest;
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 
-const VERSION = "2.10.0";
+const VERSION = "2.13.2";
 
 /**
  * Some “list” response that can be paginated have a different response structure
@@ -2557,6 +2584,16 @@ const composePaginateRest = Object.assign(paginate, {
   iterator
 });
 
+const paginatingEndpoints = ["GET /app/installations", "GET /applications/grants", "GET /authorizations", "GET /enterprises/{enterprise}/actions/permissions/organizations", "GET /enterprises/{enterprise}/actions/runner-groups", "GET /enterprises/{enterprise}/actions/runner-groups/{runner_group_id}/organizations", "GET /enterprises/{enterprise}/actions/runner-groups/{runner_group_id}/runners", "GET /enterprises/{enterprise}/actions/runners", "GET /enterprises/{enterprise}/actions/runners/downloads", "GET /events", "GET /gists", "GET /gists/public", "GET /gists/starred", "GET /gists/{gist_id}/comments", "GET /gists/{gist_id}/commits", "GET /gists/{gist_id}/forks", "GET /installation/repositories", "GET /issues", "GET /marketplace_listing/plans", "GET /marketplace_listing/plans/{plan_id}/accounts", "GET /marketplace_listing/stubbed/plans", "GET /marketplace_listing/stubbed/plans/{plan_id}/accounts", "GET /networks/{owner}/{repo}/events", "GET /notifications", "GET /organizations", "GET /orgs/{org}/actions/permissions/repositories", "GET /orgs/{org}/actions/runner-groups", "GET /orgs/{org}/actions/runner-groups/{runner_group_id}/repositories", "GET /orgs/{org}/actions/runner-groups/{runner_group_id}/runners", "GET /orgs/{org}/actions/runners", "GET /orgs/{org}/actions/runners/downloads", "GET /orgs/{org}/actions/secrets", "GET /orgs/{org}/actions/secrets/{secret_name}/repositories", "GET /orgs/{org}/blocks", "GET /orgs/{org}/credential-authorizations", "GET /orgs/{org}/events", "GET /orgs/{org}/failed_invitations", "GET /orgs/{org}/hooks", "GET /orgs/{org}/installations", "GET /orgs/{org}/invitations", "GET /orgs/{org}/invitations/{invitation_id}/teams", "GET /orgs/{org}/issues", "GET /orgs/{org}/members", "GET /orgs/{org}/migrations", "GET /orgs/{org}/migrations/{migration_id}/repositories", "GET /orgs/{org}/outside_collaborators", "GET /orgs/{org}/projects", "GET /orgs/{org}/public_members", "GET /orgs/{org}/repos", "GET /orgs/{org}/team-sync/groups", "GET /orgs/{org}/teams", "GET /orgs/{org}/teams/{team_slug}/discussions", "GET /orgs/{org}/teams/{team_slug}/discussions/{discussion_number}/comments", "GET /orgs/{org}/teams/{team_slug}/discussions/{discussion_number}/comments/{comment_number}/reactions", "GET /orgs/{org}/teams/{team_slug}/discussions/{discussion_number}/reactions", "GET /orgs/{org}/teams/{team_slug}/invitations", "GET /orgs/{org}/teams/{team_slug}/members", "GET /orgs/{org}/teams/{team_slug}/projects", "GET /orgs/{org}/teams/{team_slug}/repos", "GET /orgs/{org}/teams/{team_slug}/team-sync/group-mappings", "GET /orgs/{org}/teams/{team_slug}/teams", "GET /projects/columns/{column_id}/cards", "GET /projects/{project_id}/collaborators", "GET /projects/{project_id}/columns", "GET /repos/{owner}/{repo}/actions/artifacts", "GET /repos/{owner}/{repo}/actions/runners", "GET /repos/{owner}/{repo}/actions/runners/downloads", "GET /repos/{owner}/{repo}/actions/runs", "GET /repos/{owner}/{repo}/actions/runs/{run_id}/artifacts", "GET /repos/{owner}/{repo}/actions/runs/{run_id}/jobs", "GET /repos/{owner}/{repo}/actions/secrets", "GET /repos/{owner}/{repo}/actions/workflows", "GET /repos/{owner}/{repo}/actions/workflows/{workflow_id}/runs", "GET /repos/{owner}/{repo}/assignees", "GET /repos/{owner}/{repo}/branches", "GET /repos/{owner}/{repo}/check-runs/{check_run_id}/annotations", "GET /repos/{owner}/{repo}/check-suites/{check_suite_id}/check-runs", "GET /repos/{owner}/{repo}/code-scanning/alerts", "GET /repos/{owner}/{repo}/code-scanning/alerts/{alert_number}/instances", "GET /repos/{owner}/{repo}/code-scanning/analyses", "GET /repos/{owner}/{repo}/collaborators", "GET /repos/{owner}/{repo}/comments", "GET /repos/{owner}/{repo}/comments/{comment_id}/reactions", "GET /repos/{owner}/{repo}/commits", "GET /repos/{owner}/{repo}/commits/{commit_sha}/branches-where-head", "GET /repos/{owner}/{repo}/commits/{commit_sha}/comments", "GET /repos/{owner}/{repo}/commits/{commit_sha}/pulls", "GET /repos/{owner}/{repo}/commits/{ref}/check-runs", "GET /repos/{owner}/{repo}/commits/{ref}/check-suites", "GET /repos/{owner}/{repo}/commits/{ref}/statuses", "GET /repos/{owner}/{repo}/contributors", "GET /repos/{owner}/{repo}/deployments", "GET /repos/{owner}/{repo}/deployments/{deployment_id}/statuses", "GET /repos/{owner}/{repo}/events", "GET /repos/{owner}/{repo}/forks", "GET /repos/{owner}/{repo}/git/matching-refs/{ref}", "GET /repos/{owner}/{repo}/hooks", "GET /repos/{owner}/{repo}/invitations", "GET /repos/{owner}/{repo}/issues", "GET /repos/{owner}/{repo}/issues/comments", "GET /repos/{owner}/{repo}/issues/comments/{comment_id}/reactions", "GET /repos/{owner}/{repo}/issues/events", "GET /repos/{owner}/{repo}/issues/{issue_number}/comments", "GET /repos/{owner}/{repo}/issues/{issue_number}/events", "GET /repos/{owner}/{repo}/issues/{issue_number}/labels", "GET /repos/{owner}/{repo}/issues/{issue_number}/reactions", "GET /repos/{owner}/{repo}/issues/{issue_number}/timeline", "GET /repos/{owner}/{repo}/keys", "GET /repos/{owner}/{repo}/labels", "GET /repos/{owner}/{repo}/milestones", "GET /repos/{owner}/{repo}/milestones/{milestone_number}/labels", "GET /repos/{owner}/{repo}/notifications", "GET /repos/{owner}/{repo}/pages/builds", "GET /repos/{owner}/{repo}/projects", "GET /repos/{owner}/{repo}/pulls", "GET /repos/{owner}/{repo}/pulls/comments", "GET /repos/{owner}/{repo}/pulls/comments/{comment_id}/reactions", "GET /repos/{owner}/{repo}/pulls/{pull_number}/comments", "GET /repos/{owner}/{repo}/pulls/{pull_number}/commits", "GET /repos/{owner}/{repo}/pulls/{pull_number}/files", "GET /repos/{owner}/{repo}/pulls/{pull_number}/requested_reviewers", "GET /repos/{owner}/{repo}/pulls/{pull_number}/reviews", "GET /repos/{owner}/{repo}/pulls/{pull_number}/reviews/{review_id}/comments", "GET /repos/{owner}/{repo}/releases", "GET /repos/{owner}/{repo}/releases/{release_id}/assets", "GET /repos/{owner}/{repo}/secret-scanning/alerts", "GET /repos/{owner}/{repo}/stargazers", "GET /repos/{owner}/{repo}/subscribers", "GET /repos/{owner}/{repo}/tags", "GET /repos/{owner}/{repo}/teams", "GET /repositories", "GET /repositories/{repository_id}/environments/{environment_name}/secrets", "GET /scim/v2/enterprises/{enterprise}/Groups", "GET /scim/v2/enterprises/{enterprise}/Users", "GET /scim/v2/organizations/{org}/Users", "GET /search/code", "GET /search/commits", "GET /search/issues", "GET /search/labels", "GET /search/repositories", "GET /search/topics", "GET /search/users", "GET /teams/{team_id}/discussions", "GET /teams/{team_id}/discussions/{discussion_number}/comments", "GET /teams/{team_id}/discussions/{discussion_number}/comments/{comment_number}/reactions", "GET /teams/{team_id}/discussions/{discussion_number}/reactions", "GET /teams/{team_id}/invitations", "GET /teams/{team_id}/members", "GET /teams/{team_id}/projects", "GET /teams/{team_id}/repos", "GET /teams/{team_id}/team-sync/group-mappings", "GET /teams/{team_id}/teams", "GET /user/blocks", "GET /user/emails", "GET /user/followers", "GET /user/following", "GET /user/gpg_keys", "GET /user/installations", "GET /user/installations/{installation_id}/repositories", "GET /user/issues", "GET /user/keys", "GET /user/marketplace_purchases", "GET /user/marketplace_purchases/stubbed", "GET /user/memberships/orgs", "GET /user/migrations", "GET /user/migrations/{migration_id}/repositories", "GET /user/orgs", "GET /user/public_emails", "GET /user/repos", "GET /user/repository_invitations", "GET /user/starred", "GET /user/subscriptions", "GET /user/teams", "GET /users", "GET /users/{username}/events", "GET /users/{username}/events/orgs/{org}", "GET /users/{username}/events/public", "GET /users/{username}/followers", "GET /users/{username}/following", "GET /users/{username}/gists", "GET /users/{username}/gpg_keys", "GET /users/{username}/keys", "GET /users/{username}/orgs", "GET /users/{username}/projects", "GET /users/{username}/received_events", "GET /users/{username}/received_events/public", "GET /users/{username}/repos", "GET /users/{username}/starred", "GET /users/{username}/subscriptions"];
+
+function isPaginatingEndpoint(arg) {
+  if (typeof arg === "string") {
+    return paginatingEndpoints.includes(arg);
+  } else {
+    return false;
+  }
+}
+
 /**
  * @param octokit Octokit instance
  * @param options Options passed to Octokit constructor
@@ -2572,7 +2609,9 @@ function paginateRest(octokit) {
 paginateRest.VERSION = VERSION;
 
 exports.composePaginateRest = composePaginateRest;
+exports.isPaginatingEndpoint = isPaginatingEndpoint;
 exports.paginateRest = paginateRest;
+exports.paginatingEndpoints = paginatingEndpoints;
 //# sourceMappingURL=index.js.map
 
 
@@ -2590,6 +2629,7 @@ const Endpoints = {
   actions: {
     addSelectedRepoToOrgSecret: ["PUT /orgs/{org}/actions/secrets/{secret_name}/repositories/{repository_id}"],
     cancelWorkflowRun: ["POST /repos/{owner}/{repo}/actions/runs/{run_id}/cancel"],
+    createOrUpdateEnvironmentSecret: ["PUT /repositories/{repository_id}/environments/{environment_name}/secrets/{secret_name}"],
     createOrUpdateOrgSecret: ["PUT /orgs/{org}/actions/secrets/{secret_name}"],
     createOrUpdateRepoSecret: ["PUT /repos/{owner}/{repo}/actions/secrets/{secret_name}"],
     createRegistrationTokenForOrg: ["POST /orgs/{org}/actions/runners/registration-token"],
@@ -2598,6 +2638,7 @@ const Endpoints = {
     createRemoveTokenForRepo: ["POST /repos/{owner}/{repo}/actions/runners/remove-token"],
     createWorkflowDispatch: ["POST /repos/{owner}/{repo}/actions/workflows/{workflow_id}/dispatches"],
     deleteArtifact: ["DELETE /repos/{owner}/{repo}/actions/artifacts/{artifact_id}"],
+    deleteEnvironmentSecret: ["DELETE /repositories/{repository_id}/environments/{environment_name}/secrets/{secret_name}"],
     deleteOrgSecret: ["DELETE /orgs/{org}/actions/secrets/{secret_name}"],
     deleteRepoSecret: ["DELETE /repos/{owner}/{repo}/actions/secrets/{secret_name}"],
     deleteSelfHostedRunnerFromOrg: ["DELETE /orgs/{org}/actions/runners/{runner_id}"],
@@ -2614,16 +2655,20 @@ const Endpoints = {
     getAllowedActionsOrganization: ["GET /orgs/{org}/actions/permissions/selected-actions"],
     getAllowedActionsRepository: ["GET /repos/{owner}/{repo}/actions/permissions/selected-actions"],
     getArtifact: ["GET /repos/{owner}/{repo}/actions/artifacts/{artifact_id}"],
+    getEnvironmentPublicKey: ["GET /repositories/{repository_id}/environments/{environment_name}/secrets/public-key"],
+    getEnvironmentSecret: ["GET /repositories/{repository_id}/environments/{environment_name}/secrets/{secret_name}"],
     getGithubActionsPermissionsOrganization: ["GET /orgs/{org}/actions/permissions"],
     getGithubActionsPermissionsRepository: ["GET /repos/{owner}/{repo}/actions/permissions"],
     getJobForWorkflowRun: ["GET /repos/{owner}/{repo}/actions/jobs/{job_id}"],
     getOrgPublicKey: ["GET /orgs/{org}/actions/secrets/public-key"],
     getOrgSecret: ["GET /orgs/{org}/actions/secrets/{secret_name}"],
+    getPendingDeploymentsForRun: ["GET /repos/{owner}/{repo}/actions/runs/{run_id}/pending_deployments"],
     getRepoPermissions: ["GET /repos/{owner}/{repo}/actions/permissions", {}, {
       renamed: ["actions", "getGithubActionsPermissionsRepository"]
     }],
     getRepoPublicKey: ["GET /repos/{owner}/{repo}/actions/secrets/public-key"],
     getRepoSecret: ["GET /repos/{owner}/{repo}/actions/secrets/{secret_name}"],
+    getReviewsForRun: ["GET /repos/{owner}/{repo}/actions/runs/{run_id}/approvals"],
     getSelfHostedRunnerForOrg: ["GET /orgs/{org}/actions/runners/{runner_id}"],
     getSelfHostedRunnerForRepo: ["GET /repos/{owner}/{repo}/actions/runners/{runner_id}"],
     getWorkflow: ["GET /repos/{owner}/{repo}/actions/workflows/{workflow_id}"],
@@ -2631,6 +2676,7 @@ const Endpoints = {
     getWorkflowRunUsage: ["GET /repos/{owner}/{repo}/actions/runs/{run_id}/timing"],
     getWorkflowUsage: ["GET /repos/{owner}/{repo}/actions/workflows/{workflow_id}/timing"],
     listArtifactsForRepo: ["GET /repos/{owner}/{repo}/actions/artifacts"],
+    listEnvironmentSecrets: ["GET /repositories/{repository_id}/environments/{environment_name}/secrets"],
     listJobsForWorkflowRun: ["GET /repos/{owner}/{repo}/actions/runs/{run_id}/jobs"],
     listOrgSecrets: ["GET /orgs/{org}/actions/secrets"],
     listRepoSecrets: ["GET /repos/{owner}/{repo}/actions/secrets"],
@@ -2646,6 +2692,7 @@ const Endpoints = {
     listWorkflowRunsForRepo: ["GET /repos/{owner}/{repo}/actions/runs"],
     reRunWorkflow: ["POST /repos/{owner}/{repo}/actions/runs/{run_id}/rerun"],
     removeSelectedRepoFromOrgSecret: ["DELETE /orgs/{org}/actions/secrets/{secret_name}/repositories/{repository_id}"],
+    reviewPendingDeploymentsForRun: ["POST /repos/{owner}/{repo}/actions/runs/{run_id}/pending_deployments"],
     setAllowedActionsOrganization: ["PUT /orgs/{org}/actions/permissions/selected-actions"],
     setAllowedActionsRepository: ["PUT /repos/{owner}/{repo}/actions/permissions/selected-actions"],
     setGithubActionsPermissionsOrganization: ["PUT /orgs/{org}/actions/permissions"],
@@ -3278,7 +3325,7 @@ const Endpoints = {
         previews: ["squirrel-girl"]
       }
     }, {
-      deprecated: "octokit.reactions.deleteLegacy() is deprecated, see https://docs.github.com/v3/reactions/#delete-a-reaction-legacy"
+      deprecated: "octokit.reactions.deleteLegacy() is deprecated, see https://docs.github.com/rest/reference/reactions/#delete-a-reaction-legacy"
     }],
     listForCommitComment: ["GET /repos/{owner}/{repo}/comments/{comment_id}/reactions", {
       mediaType: {
@@ -3347,6 +3394,7 @@ const Endpoints = {
     createForAuthenticatedUser: ["POST /user/repos"],
     createFork: ["POST /repos/{owner}/{repo}/forks"],
     createInOrg: ["POST /orgs/{org}/repos"],
+    createOrUpdateEnvironment: ["PUT /repos/{owner}/{repo}/environments/{environment_name}"],
     createOrUpdateFileContents: ["PUT /repos/{owner}/{repo}/contents/{path}"],
     createPagesSite: ["POST /repos/{owner}/{repo}/pages", {
       mediaType: {
@@ -3364,6 +3412,7 @@ const Endpoints = {
     delete: ["DELETE /repos/{owner}/{repo}"],
     deleteAccessRestrictions: ["DELETE /repos/{owner}/{repo}/branches/{branch}/protection/restrictions"],
     deleteAdminBranchProtection: ["DELETE /repos/{owner}/{repo}/branches/{branch}/protection/enforce_admins"],
+    deleteAnEnvironment: ["DELETE /repos/{owner}/{repo}/environments/{environment_name}"],
     deleteBranchProtection: ["DELETE /repos/{owner}/{repo}/branches/{branch}/protection"],
     deleteCommitComment: ["DELETE /repos/{owner}/{repo}/comments/{comment_id}"],
     deleteCommitSignatureProtection: ["DELETE /repos/{owner}/{repo}/branches/{branch}/protection/required_signatures", {
@@ -3412,6 +3461,7 @@ const Endpoints = {
     get: ["GET /repos/{owner}/{repo}"],
     getAccessRestrictions: ["GET /repos/{owner}/{repo}/branches/{branch}/protection/restrictions"],
     getAdminBranchProtection: ["GET /repos/{owner}/{repo}/branches/{branch}/protection/enforce_admins"],
+    getAllEnvironments: ["GET /repos/{owner}/{repo}/environments"],
     getAllStatusCheckContexts: ["GET /repos/{owner}/{repo}/branches/{branch}/protection/required_status_checks/contexts"],
     getAllTopics: ["GET /repos/{owner}/{repo}/topics", {
       mediaType: {
@@ -3439,6 +3489,7 @@ const Endpoints = {
     getDeployKey: ["GET /repos/{owner}/{repo}/keys/{key_id}"],
     getDeployment: ["GET /repos/{owner}/{repo}/deployments/{deployment_id}"],
     getDeploymentStatus: ["GET /repos/{owner}/{repo}/deployments/{deployment_id}/statuses/{status_id}"],
+    getEnvironment: ["GET /repos/{owner}/{repo}/environments/{environment_name}"],
     getLatestPagesBuild: ["GET /repos/{owner}/{repo}/pages/builds/latest"],
     getLatestRelease: ["GET /repos/{owner}/{repo}/releases/latest"],
     getPages: ["GET /repos/{owner}/{repo}/pages"],
@@ -3650,7 +3701,7 @@ const Endpoints = {
   }
 };
 
-const VERSION = "4.12.0";
+const VERSION = "4.13.5";
 
 function endpointsToMethods(octokit, endpointsMap) {
   const newMethods = {};
