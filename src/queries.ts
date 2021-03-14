@@ -128,7 +128,18 @@ export const getPullRequestChanges = async (
 ): Promise<IGitHubFileChange[]> => {
   const head = await octokit.pulls.listFiles({
     ...context.repo,
-    pull_number: pullRequestnumber // eslint-disable-line camelcase
+    pull_number: pullRequestnumber, // eslint-disable-line camelcase
+    /**
+     * This is correct the different default values which on larger pull requests is an issue.
+     * There is no pagination support.
+     *
+     * https://docs.github.com/en/rest/reference/pulls#list-pull-requests-files
+     * > Responses include a maximum of 3000 files. The paginated response returns 30 files per page by default.
+     *
+     * https://docs.github.com/en/rest/reference/repos#get-a-commit
+     * > If there are more than 300 files in the commit diff, the response will include pagination link headers for the remaining files, up to a limit of 3000 files.
+     */
+    per_page: 300 // eslint-disable-line camelcase
   })
 
   return head.data
