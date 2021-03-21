@@ -389,8 +389,10 @@ function run() {
             // Get the label to use
             const conflictLabel = util_1.findLabelByName(yield queries_1.getLabels(octokit, github.context, conflictLabelName), conflictLabelName);
             if (github.context.eventName === 'pull_request') {
-                const pushPayload = github.context.payload;
-                core.info(`Currently working on the Pull Request: ${pushPayload.number}`);
+                const prEvent = github.context.payload;
+                core.info(`Currently working on the Pull Request: ${prEvent.number}`);
+                core.info(` -- Mergeable: ${prEvent.pull_request.mergeable}`);
+                core.info(` -- Labels: ${prEvent.pull_request.labels}`);
             }
             core.startGroup('🔎 Gather Pull Request Data');
             const pullRequests = yield pulls_1.gatherPullRequests(octokit, github.context, waitMs, maxRetries);
