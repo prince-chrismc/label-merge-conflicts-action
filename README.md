@@ -5,7 +5,7 @@
 
 ## Purpose
 
-This action checks all open pull requests for merge conflicts and marks them with a [label](https://guides.github.com/features/issues/#filtering).
+This action _intuitively_ checks open pull request(s) for merge conflicts and marks them with a [label](https://guides.github.com/features/issues/#filtering).
 
 ![comic](https://github.com/prince-chrismc/label-merge-conflicts-action/blob/main/.github/label-merge-conflicts.png?raw=true)
 
