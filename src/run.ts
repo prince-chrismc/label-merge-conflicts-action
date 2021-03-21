@@ -36,7 +36,7 @@ export async function run(): Promise<void> {
 
     core.startGroup('🏷️ Updating labels')
     for (const pullRequest of pullRequests) {
-      await updatePullRequestConflictLabel(octokit, github.context, pullRequest, conflictLabel, detectMergeChanges)
+      await updatePullRequestConflictLabel(octokit, github.context, pullRequest.node, conflictLabel, detectMergeChanges)
     }
     core.endGroup()
   } catch (error) {

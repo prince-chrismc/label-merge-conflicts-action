@@ -54,18 +54,18 @@ function applyLabelable(octokit, labelable, hasLabel, pullRequestNumber) {
 function updatePullRequestConflictLabel(octokit, context, pullRequest, conflictLabel, detectMergeChanges) {
     return __awaiter(this, void 0, void 0, function* () {
         const hasLabel = util_1.isAlreadyLabeled(pullRequest, conflictLabel);
-        const labelable = { labelId: conflictLabel.node.id, labelableId: pullRequest.node.id };
-        switch (pullRequest.node.mergeable) {
+        const labelable = { labelId: conflictLabel.node.id, labelableId: pullRequest.id };
+        switch (pullRequest.mergeable) {
             case 'CONFLICTING':
-                yield applyLabelable(octokit, labelable, hasLabel, pullRequest.node.number);
+                yield applyLabelable(octokit, labelable, hasLabel, pullRequest.number);
                 break;
             case 'MERGEABLE':
                 if (detectMergeChanges && (yield pulls_1.checkPullRequestForMergeChanges(octokit, context, pullRequest))) {
-                    yield applyLabelable(octokit, labelable, hasLabel, pullRequest.node.number);
+                    yield applyLabelable(octokit, labelable, hasLabel, pullRequest.number);
                     break;
                 }
                 if (hasLabel) {
-                    core.info(`Unmarking #${pullRequest.node.number}...`);
+                    core.info(`Unmarking #${pullRequest.number}...`);
                     yield queries_1.removeLabelFromLabelable(octokit, labelable);
                 }
                 break;
@@ -162,16 +162,16 @@ function gatherPullRequests(octokit, context, waitMs, maxRetries) {
 }
 exports.gatherPullRequests = gatherPullRequests;
 const checkPullRequestForMergeChanges = (octokit, context, pullRequest) => __awaiter(void 0, void 0, void 0, function* () {
-    const prChangedFiles = yield queries_1.getPullRequestChanges(octokit, context, pullRequest.node.number);
-    const mergeChangedFiles = yield queries_1.getCommitChanges(octokit, context, pullRequest.node.potentialMergeCommit.oid);
+    const prChangedFiles = yield queries_1.getPullRequestChanges(octokit, context, pullRequest.number);
+    const mergeChangedFiles = yield queries_1.getCommitChanges(octokit, context, pullRequest.potentialMergeCommit.oid);
     if (prChangedFiles.length !== mergeChangedFiles.length) {
-        core.info(`#${pullRequest.node.number} has a difference in the number of files`);
+        core.info(`#${pullRequest.number} has a difference in the number of files`);
         return true; // I'd be shocked if it was not!
     }
     // TODO: There's an assumption the files list should always be ordered the same which needs to be verified.
     for (let i = 0; i < prChangedFiles.length; i++) {
         if (prChangedFiles[i].sha !== mergeChangedFiles[i].sha) {
-            core.info(`#${pullRequest.node.number} has a mismatching SHA's`);
+            core.info(`#${pullRequest.number} has a mismatching SHA's`);
             return true;
         }
     }
@@ -197,7 +197,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.getCommitChanges = exports.getPullRequestChanges = exports.removeLabelFromLabelable = exports.addLabelToLabelable = exports.getLabels = exports.getPullRequests = void 0;
+exports.getCommitChanges = exports.getPullRequestChanges = exports.removeLabelFromLabelable = exports.addLabelToLabelable = exports.getLabels = exports.getPullRequest = exports.getPullRequests = void 0;
 const getPullRequestPages = (octokit, context, cursor) => __awaiter(void 0, void 0, void 0, function* () {
     const after = `, after: "${cursor}"`;
     const query = `{
@@ -244,6 +244,31 @@ const getPullRequests = (octokit, context) => __awaiter(void 0, void 0, void 0, 
     return pullrequests;
 });
 exports.getPullRequests = getPullRequests;
+const getPullRequest = (octokit, context, number) => __awaiter(void 0, void 0, void 0, function* () {
+    const query = `query ($owner: String!, $name: String!, $number: Int!) { 
+    repository(owner:$owner name:$name) {
+      pullRequest(number: $number) {
+        id
+        number
+        mergeable
+        potentialMergeCommit {
+          oid
+        }
+        labels(first: 100) {
+          edges {
+            node {
+              id
+              name
+            }
+          }
+        }
+      }
+    }
+  }`;
+    const repoPr = yield octokit.graphql(query, Object.assign(Object.assign({}, context.repo), { number }));
+    return repoPr.repository.pullRequest;
+});
+exports.getPullRequest = getPullRequest;
 const getLabels = (octokit, context, labelName) => __awaiter(void 0, void 0, void 0, function* () {
     const query = `{
     repository(owner: "${context.repo.owner}", name: "${context.repo.repo}") {
@@ -372,7 +397,7 @@ function run() {
             core.endGroup();
             core.startGroup('🏷️ Updating labels');
             for (const pullRequest of pullRequests) {
-                yield label_1.updatePullRequestConflictLabel(octokit, github.context, pullRequest, conflictLabel, detectMergeChanges);
+                yield label_1.updatePullRequestConflictLabel(octokit, github.context, pullRequest.node, conflictLabel, detectMergeChanges);
             }
             core.endGroup();
         }
@@ -400,7 +425,7 @@ function getPullrequestsWithoutMergeStatus(pullrequests) {
 }
 exports.getPullrequestsWithoutMergeStatus = getPullrequestsWithoutMergeStatus;
 function isAlreadyLabeled(pullrequest, label) {
-    return (pullrequest.node.labels.edges.find((l) => {
+    return (pullrequest.labels.edges.find((l) => {
         return l.node.id === label.node.id;
     }) !== undefined);
 }

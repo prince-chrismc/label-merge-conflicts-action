@@ -3,7 +3,7 @@ import * as github from '@actions/github'
 import nock from 'nock'
 
 import {wait} from '../src/wait'
-import {IGithubRepoLabels, IGithubPRNode, IGithubLabelNode} from '../src/interfaces'
+import {IGithubRepoLabels, IGithubPRNode, IGithubLabelNode, IGithubPullRequest} from '../src/interfaces'
 import {findLabelByName, isAlreadyLabeled} from '../src/util'
 import {
   getLabels,
@@ -67,37 +67,32 @@ describe('label matching', () => {
 
 describe('pr label checking', () => {
   const expectedLabel: IGithubLabelNode = {node: {id: '1654984416', name: 'expected_label'}}
-  const makePrNode = (...label: IGithubLabelNode[]): IGithubPRNode => {
+  const makePr = (...label: IGithubLabelNode[]): IGithubPullRequest => {
     return {
-      node: {
-        id: 'MDExOlB1bGxSZXF1ZXN0NTc4ODgyNDUw',
-        number: 7,
-        mergeable: 'MERGEABLE',
-        potentialMergeCommit: {
-          oid: '5ed0e15d4ca4ce73e847ee1f0369ee85a6e67bc9'
-        },
-        labels: {edges: [...label]}
-      }
+      id: 'MDExOlB1bGxSZXF1ZXN0NTc4ODgyNDUw',
+      number: 7,
+      mergeable: 'MERGEABLE',
+      potentialMergeCommit: {
+        oid: '5ed0e15d4ca4ce73e847ee1f0369ee85a6e67bc9'
+      },
+      labels: {edges: [...label]}
     }
   }
 
   test('finds from one label', () => {
-    const prNode: IGithubPRNode = makePrNode(expectedLabel)
+    const prNode = makePr(expectedLabel)
     const isLabeled = isAlreadyLabeled(prNode, expectedLabel)
     expect(isLabeled).toBeTruthy()
   })
 
   test('finds from many labels', () => {
-    const prNode: IGithubPRNode = makePrNode(
-      {node: {id: 'MDU6TGFiZWwxMjUyNDcxNTgz', name: 'has conflicts'}},
-      expectedLabel
-    )
+    const prNode = makePr({node: {id: 'MDU6TGFiZWwxMjUyNDcxNTgz', name: 'has conflicts'}}, expectedLabel)
     const isLabeled = isAlreadyLabeled(prNode, expectedLabel)
     expect(isLabeled).toBeTruthy()
   })
 
   test('false when no match', () => {
-    const prNode: IGithubPRNode = makePrNode(
+    const prNode = makePr(
       {node: {id: 'MDU6TGFiZWwxMjUyNDcxNTgz', name: 'has conflicts'}},
       {node: {id: 'flbvalvbea;lygh;dbl;gblas;', name: 'some other label'}}
     )
@@ -866,7 +861,7 @@ describe('queries', () => {
           .reply(200, makeCommitPage(changes[0]))
 
         const octokit = github.getOctokit('justafaketoken')
-        const changed = await checkPullRequestForMergeChanges(octokit, github.context, prNode)
+        const changed = await checkPullRequestForMergeChanges(octokit, github.context, prNode.node)
 
         expect(changed).toBe(true)
       })
@@ -887,7 +882,7 @@ describe('queries', () => {
           .reply(200, makeCommitPage(changes[1]))
 
         const octokit = github.getOctokit('justafaketoken')
-        const changed = await checkPullRequestForMergeChanges(octokit, github.context, prNode)
+        const changed = await checkPullRequestForMergeChanges(octokit, github.context, prNode.node)
 
         expect(changed).toBe(true)
       })
@@ -908,7 +903,7 @@ describe('queries', () => {
           .reply(200, makeCommitPage(...changes))
 
         const octokit = github.getOctokit('justafaketoken')
-        const changed = await checkPullRequestForMergeChanges(octokit, github.context, prNode)
+        const changed = await checkPullRequestForMergeChanges(octokit, github.context, prNode.node)
 
         expect(changed).toBe(false)
       })
@@ -917,17 +912,15 @@ describe('queries', () => {
 
   describe('correctly determines labeling', () => {
     const expectedLabel: IGithubLabelNode = {node: {id: 'MDU6TGFiZWwyNzYwMjE1ODI0', name: 'expected_label'}}
-    const makePrNode = (mergeable: string, ...label: IGithubLabelNode[]): IGithubPRNode => {
+    const makePr = (mergeable: string, ...label: IGithubLabelNode[]): IGithubPullRequest => {
       return {
-        node: {
-          id: 'MDExOlB1bGxSZXF1ZXN0NTc4ODgyNDUw',
-          number: 7,
-          mergeable: mergeable,
-          potentialMergeCommit: {
-            oid: '5ed0e15d4ca4ce73e847ee1f0369ee85a6e67bc9'
-          },
-          labels: {edges: [...label]}
-        }
+        id: 'MDExOlB1bGxSZXF1ZXN0NTc4ODgyNDUw',
+        number: 7,
+        mergeable: mergeable,
+        potentialMergeCommit: {
+          oid: '5ed0e15d4ca4ce73e847ee1f0369ee85a6e67bc9'
+        },
+        labels: {edges: [...label]}
       }
     }
 
@@ -944,7 +937,7 @@ describe('queries', () => {
           )
           .reply(200, {data: {clientMutationId: 'auniqueid'}})
 
-        const pullRequest: IGithubPRNode = makePrNode('CONFLICTING')
+        const pullRequest = makePr('CONFLICTING')
         const octokit = github.getOctokit('justafaketoken')
         const added = updatePullRequestConflictLabel(octokit, github.context, pullRequest, expectedLabel, false)
 
@@ -966,7 +959,7 @@ describe('queries', () => {
             documentation_url: 'https://docs.github.com/graphql'
           })
 
-        const pullRequest: IGithubPRNode = makePrNode('CONFLICTING')
+        const pullRequest = makePr('CONFLICTING')
         const octokit = github.getOctokit('justafaketoken')
         const added = updatePullRequestConflictLabel(octokit, github.context, pullRequest, expectedLabel, false)
 
@@ -974,7 +967,7 @@ describe('queries', () => {
       })
 
       it('does nothing when already labeled', async () => {
-        const pullRequest: IGithubPRNode = makePrNode('CONFLICTING', expectedLabel)
+        const pullRequest = makePr('CONFLICTING', expectedLabel)
 
         const octokit = github.getOctokit('justafaketoken')
         const mockFunction = jest.spyOn(octokit, 'graphql').mockImplementation(jest.fn())
@@ -997,7 +990,7 @@ describe('queries', () => {
           )
           .reply(200, {data: {}})
 
-        const pullRequest: IGithubPRNode = makePrNode('MERGEABLE', expectedLabel)
+        const pullRequest = makePr('MERGEABLE', expectedLabel)
 
         const octokit = github.getOctokit('justafaketoken')
         const removed = updatePullRequestConflictLabel(octokit, github.context, pullRequest, expectedLabel, false)
@@ -1017,7 +1010,7 @@ describe('queries', () => {
             documentation_url: 'https://docs.github.com/graphql'
           })
 
-        const pullRequest: IGithubPRNode = makePrNode('MERGEABLE', expectedLabel)
+        const pullRequest = makePr('MERGEABLE', expectedLabel)
         const octokit = github.getOctokit('justafaketoken')
         const removed = updatePullRequestConflictLabel(octokit, github.context, pullRequest, expectedLabel, false)
 
@@ -1025,7 +1018,7 @@ describe('queries', () => {
       })
 
       it('does nothing when no label', async () => {
-        const pullRequest: IGithubPRNode = makePrNode('MERGEABLE')
+        const pullRequest = makePr('MERGEABLE')
 
         const octokit = github.getOctokit('justafaketoken')
         const mockFunction = jest.spyOn(octokit, 'graphql').mockImplementation(jest.fn())
@@ -1037,14 +1030,14 @@ describe('queries', () => {
 
     describe('merge changes', () => {
       it('removes an old label', async () => {
-        const pullRequest: IGithubPRNode = makePrNode('MERGEABLE', expectedLabel)
+        const pullRequest = makePr('MERGEABLE', expectedLabel)
         const scope = nock('https://api.github.com', {
           reqheaders: {
             authorization: 'token justafaketoken'
           }
         })
           .get(
-            `/repos/${github.context.repo.owner}/${github.context.repo.repo}/pulls/${pullRequest.node.number}/files?per_page=300`
+            `/repos/${github.context.repo.owner}/${github.context.repo.repo}/pulls/${pullRequest.number}/files?per_page=300`
           )
           .reply(200, [
             {
@@ -1056,7 +1049,7 @@ describe('queries', () => {
             }
           ])
           .get(
-            `/repos/${github.context.repo.owner}/${github.context.repo.repo}/commits/${pullRequest.node.potentialMergeCommit.oid}`
+            `/repos/${github.context.repo.owner}/${github.context.repo.repo}/commits/${pullRequest.potentialMergeCommit.oid}`
           )
           .reply(200, {
             sha: '7ac057b641fec3b2b4a0ccdadb2b7476faca8bf0',
@@ -1115,14 +1108,14 @@ describe('queries', () => {
       })
 
       it('removes an old label', async () => {
-        const pullRequest: IGithubPRNode = makePrNode('MERGEABLE', expectedLabel)
+        const pullRequest = makePr('MERGEABLE', expectedLabel)
         const scope = nock('https://api.github.com', {
           reqheaders: {
             authorization: 'token justafaketoken'
           }
         })
           .get(
-            `/repos/${github.context.repo.owner}/${github.context.repo.repo}/pulls/${pullRequest.node.number}/files?per_page=300`
+            `/repos/${github.context.repo.owner}/${github.context.repo.repo}/pulls/${pullRequest.number}/files?per_page=300`
           )
           .reply(200, [
             {
@@ -1141,7 +1134,7 @@ describe('queries', () => {
             }
           ])
           .get(
-            `/repos/${github.context.repo.owner}/${github.context.repo.repo}/commits/${pullRequest.node.potentialMergeCommit.oid}`
+            `/repos/${github.context.repo.owner}/${github.context.repo.repo}/commits/${pullRequest.potentialMergeCommit.oid}`
           )
           .reply(200, {
             sha: 'd98404b1b9ebbc0397da93b81244511ab11867fe',
@@ -1208,7 +1201,7 @@ describe('queries', () => {
     })
 
     it('does nothing when mergeable is unknown', async () => {
-      const pullRequest: IGithubPRNode = makePrNode('UNKNOWN')
+      const pullRequest = makePr('UNKNOWN')
 
       const octokit = github.getOctokit('justafaketoken')
       const mockFunction = jest.spyOn(octokit, 'graphql').mockImplementation(jest.fn())

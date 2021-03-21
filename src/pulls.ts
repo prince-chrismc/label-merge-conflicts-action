@@ -2,7 +2,7 @@ import * as core from '@actions/core'
 import {Context} from '@actions/github/lib/context'
 import {GitHub} from '@actions/github/lib/utils'
 
-import {IGithubPRNode} from './interfaces'
+import {IGithubPRNode, IGithubPullRequest} from './interfaces'
 import {wait} from './wait'
 import {getCommitChanges, getPullRequestChanges, getPullRequests} from './queries'
 import {getPullrequestsWithoutMergeStatus} from './util'
@@ -50,20 +50,20 @@ export async function gatherPullRequests(
 export const checkPullRequestForMergeChanges = async (
   octokit: InstanceType<typeof GitHub>,
   context: Context,
-  pullRequest: IGithubPRNode
+  pullRequest: IGithubPullRequest
 ): Promise<boolean> => {
-  const prChangedFiles = await getPullRequestChanges(octokit, context, pullRequest.node.number)
-  const mergeChangedFiles = await getCommitChanges(octokit, context, pullRequest.node.potentialMergeCommit.oid)
+  const prChangedFiles = await getPullRequestChanges(octokit, context, pullRequest.number)
+  const mergeChangedFiles = await getCommitChanges(octokit, context, pullRequest.potentialMergeCommit.oid)
 
   if (prChangedFiles.length !== mergeChangedFiles.length) {
-    core.info(`#${pullRequest.node.number} has a difference in the number of files`)
+    core.info(`#${pullRequest.number} has a difference in the number of files`)
     return true // I'd be shocked if it was not!
   }
 
   // TODO: There's an assumption the files list should always be ordered the same which needs to be verified.
   for (let i = 0; i < prChangedFiles.length; i++) {
     if (prChangedFiles[i].sha !== mergeChangedFiles[i].sha) {
-      core.info(`#${pullRequest.node.number} has a mismatching SHA's`)
+      core.info(`#${pullRequest.number} has a mismatching SHA's`)
       return true
     }
   }
