@@ -72,8 +72,8 @@ export const getPullRequest = async (
   context: Context,
   number: number
 ): Promise<IGithubPullRequest> => {
-  const query = `query ($owner: String!, $name: String!, $number: Int!) { 
-    repository(owner:$owner name:$name) {
+  const query = `query ($owner: String!, $repo: String!, $number: Int!) { 
+    repository(owner:$owner name:$repo) {
       pullRequest(number: $number) {
         id
         number

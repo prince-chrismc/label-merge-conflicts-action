@@ -264,8 +264,8 @@ const getPullRequests = (octokit, context) => __awaiter(void 0, void 0, void 0, 
 });
 exports.getPullRequests = getPullRequests;
 const getPullRequest = (octokit, context, number) => __awaiter(void 0, void 0, void 0, function* () {
-    const query = `query ($owner: String!, $name: String!, $number: Int!) { 
-    repository(owner:$owner name:$name) {
+    const query = `query ($owner: String!, $repo: String!, $number: Int!) { 
+    repository(owner:$owner name:$repo) {
       pullRequest(number: $number) {
         id
         number
