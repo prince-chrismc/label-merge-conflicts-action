@@ -363,6 +363,10 @@ function run() {
             core.debug(`detectMergeChanges=${detectMergeChanges}`);
             // Get the label to use
             const conflictLabel = util_1.findLabelByName(yield queries_1.getLabels(octokit, github.context, conflictLabelName), conflictLabelName);
+            if (github.context.eventName === 'pull_request') {
+                const pushPayload = github.context.payload;
+                core.info(`Currently working on the Pull Request: ${pushPayload.number}`);
+            }
             core.startGroup('🔎 Gather Pull Request Data');
             const pullRequests = yield pulls_1.gatherPullRequests(octokit, github.context, waitMs, maxRetries);
             core.endGroup();
@@ -1764,7 +1768,7 @@ function _objectWithoutProperties(source, excluded) {
   return target;
 }
 
-const VERSION = "3.3.0";
+const VERSION = "3.3.1";
 
 class Octokit {
   constructor(options = {}) {
@@ -2473,7 +2477,7 @@ exports.withCustomRequest = withCustomRequest;
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 
-const VERSION = "2.13.2";
+const VERSION = "2.13.3";
 
 /**
  * Some “list” response that can be paginated have a different response structure
