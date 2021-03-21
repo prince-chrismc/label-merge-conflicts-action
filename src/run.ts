@@ -1,10 +1,11 @@
 import * as core from '@actions/core'
 import * as github from '@actions/github'
+import {PullRequestEvent} from '@octokit/webhooks-definitions/schema'
+
 import {getLabels} from './queries'
 import {findLabelByName} from './util'
-import {gatherPullRequests} from './pulls'
+import {gatherPullRequest, gatherPullRequests} from './pulls'
 import {updatePullRequestConflictLabel} from './label'
-import {PullRequestEvent} from '@octokit/webhooks-definitions/schema'
 
 export async function run(): Promise<void> {
   try {
@@ -27,12 +28,20 @@ export async function run(): Promise<void> {
 
     if (github.context.eventName === 'pull_request') {
       const prEvent = github.context.payload as PullRequestEvent
-      core.info(`Currently working on the Pull Request: ${prEvent.number}`)
+      core.startGroup(`🔎 Gather data for Pull Request #${prEvent.number}`)
       core.info(` -- Mergeable: ${prEvent.pull_request.mergeable}`)
-      core.info(` -- Labels: ${prEvent.pull_request.labels}`)
+      core.info(` -- Labels: ${prEvent.pull_request.labels[0].name}`)
+      const pr = await gatherPullRequest(octokit, github.context, prEvent, waitMs, maxRetries)
+      core.endGroup()
+
+      core.startGroup('🏷️ Updating labels')
+      await updatePullRequestConflictLabel(octokit, github.context, pr, conflictLabel, detectMergeChanges)
+      core.endGroup()
+
+      return
     }
 
-    core.startGroup('🔎 Gather Pull Request Data')
+    core.startGroup('🔎 Gather data for all Pull Requests')
     const pullRequests = await gatherPullRequests(octokit, github.context, waitMs, maxRetries)
     core.endGroup()
 

@@ -125,14 +125,33 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.checkPullRequestForMergeChanges = exports.gatherPullRequests = void 0;
+exports.checkPullRequestForMergeChanges = exports.gatherPullRequests = exports.gatherPullRequest = void 0;
 const core = __importStar(__nccwpck_require__(2186));
 const wait_1 = __nccwpck_require__(5817);
 const queries_1 = __nccwpck_require__(775);
 const util_1 = __nccwpck_require__(4024);
-// fetch PRs up to $maxRetries times
-// multiple fetches are necessary because Github computes the 'mergeable' status asynchronously, on request,
-// which might not be available directly after the merge
+function gatherPullRequest(octokit, context, prEvent, waitMs, maxRetries) {
+    return __awaiter(this, void 0, void 0, function* () {
+        let tries = 0;
+        let pullRequest;
+        let uknownStatus = typeof prEvent.pull_request.mergeable !== 'boolean';
+        do {
+            tries++;
+            if (uknownStatus) {
+                // on event trigger we still need to give it time to calc if it was unknown
+                core.info(`...waiting for mergeable info...`);
+                yield wait_1.wait(waitMs);
+            }
+            pullRequest = yield queries_1.getPullRequest(octokit, context, prEvent.number); // Always get it since the conversion is non-trivial
+            uknownStatus = pullRequest.mergeable === 'UNKNOWN';
+        } while (uknownStatus && maxRetries >= tries);
+        if (uknownStatus) {
+            throw new Error(`Could not determine mergeable status for: #${prEvent.number}`);
+        }
+        return pullRequest;
+    });
+}
+exports.gatherPullRequest = gatherPullRequest;
 function gatherPullRequests(octokit, context, waitMs, maxRetries) {
     return __awaiter(this, void 0, void 0, function* () {
         let tries = 0;
@@ -390,11 +409,17 @@ function run() {
             const conflictLabel = util_1.findLabelByName(yield queries_1.getLabels(octokit, github.context, conflictLabelName), conflictLabelName);
             if (github.context.eventName === 'pull_request') {
                 const prEvent = github.context.payload;
-                core.info(`Currently working on the Pull Request: ${prEvent.number}`);
+                core.startGroup(`🔎 Gather data for Pull Request #${prEvent.number}`);
                 core.info(` -- Mergeable: ${prEvent.pull_request.mergeable}`);
-                core.info(` -- Labels: ${prEvent.pull_request.labels}`);
+                core.info(` -- Labels: ${prEvent.pull_request.labels[0].name}`);
+                const pr = yield pulls_1.gatherPullRequest(octokit, github.context, prEvent, waitMs, maxRetries);
+                core.endGroup();
+                core.startGroup('🏷️ Updating labels');
+                yield label_1.updatePullRequestConflictLabel(octokit, github.context, pr, conflictLabel, detectMergeChanges);
+                core.endGroup();
+                return;
             }
-            core.startGroup('🔎 Gather Pull Request Data');
+            core.startGroup('🔎 Gather data for all Pull Requests');
             const pullRequests = yield pulls_1.gatherPullRequests(octokit, github.context, waitMs, maxRetries);
             core.endGroup();
             core.startGroup('🏷️ Updating labels');

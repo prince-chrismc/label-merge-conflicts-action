@@ -1,15 +1,44 @@
 import * as core from '@actions/core'
 import {Context} from '@actions/github/lib/context'
 import {GitHub} from '@actions/github/lib/utils'
+import {PullRequestEvent} from '@octokit/webhooks-definitions/schema'
 
 import {IGithubPRNode, IGithubPullRequest} from './interfaces'
 import {wait} from './wait'
-import {getCommitChanges, getPullRequestChanges, getPullRequests} from './queries'
+import {getCommitChanges, getPullRequestChanges, getPullRequests, getPullRequest} from './queries'
 import {getPullrequestsWithoutMergeStatus} from './util'
 
-// fetch PRs up to $maxRetries times
-// multiple fetches are necessary because Github computes the 'mergeable' status asynchronously, on request,
-// which might not be available directly after the merge
+export async function gatherPullRequest(
+  octokit: InstanceType<typeof GitHub>,
+  context: Context,
+  prEvent: PullRequestEvent,
+  waitMs: number,
+  maxRetries: number
+): Promise<IGithubPullRequest> {
+  let tries = 0
+  let pullRequest: IGithubPullRequest
+  let uknownStatus: boolean = typeof prEvent.pull_request.mergeable !== 'boolean'
+
+  do {
+    tries++
+
+    if (uknownStatus) {
+      // on event trigger we still need to give it time to calc if it was unknown
+      core.info(`...waiting for mergeable info...`)
+      await wait(waitMs)
+    }
+
+    pullRequest = await getPullRequest(octokit, context, prEvent.number) // Always get it since the conversion is non-trivial
+    uknownStatus = pullRequest.mergeable === 'UNKNOWN'
+  } while (uknownStatus && maxRetries >= tries)
+
+  if (uknownStatus) {
+    throw new Error(`Could not determine mergeable status for: #${prEvent.number}`)
+  }
+
+  return pullRequest
+}
+
 export async function gatherPullRequests(
   octokit: InstanceType<typeof GitHub>,
   context: Context,
