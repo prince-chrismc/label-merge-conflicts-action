@@ -14,9 +14,10 @@ import {
   getCommitChanges,
   getPullRequest
 } from '../src/queries'
-import {checkPullRequestForMergeChanges, gatherPullRequests} from '../src/pulls'
+import {checkPullRequestForMergeChanges, gatherPullRequests, gatherPullRequest} from '../src/pulls'
 import {updatePullRequestConflictLabel} from '../src/label'
 import {run} from '../src/run'
+import { PullRequestEvent } from '@octokit/webhooks-definitions/schema'
 
 test('throws invalid number', async () => {
   const input = parseInt('foo', 10)
@@ -149,6 +150,72 @@ describe('queries', () => {
     // Restore
     jest.restoreAllMocks()
   })
+
+  const mockPullRequestEvent = {
+    action: 'opened',
+    number: 2,
+    pull_request: {
+      url: 'https://api.github.com/repos/Codertocat/Hello-World/pulls/2',
+      id: 279147437,
+      node_id: 'MDExOlB1bGxSZXF1ZXN0Mjc5MTQ3NDM3',
+      number: 2,
+      locked: false,
+      title: 'Update the README with new information.',
+      user: {
+        login: 'Codertocat',
+        id: 21031067,
+        node_id: 'MDQ6VXNlcjIxMDMxMDY3'
+      },
+      body: 'This is a pretty simple change that we need to pull into master.',
+      created_at: '2019-05-15T15:20:33Z',
+      updated_at: '2019-05-15T15:20:33Z',
+      head: {
+        label: 'Codertocat:changes',
+        ref: 'changes',
+        sha: 'ec26c3e57ca3a959ca5aad62de7213c562f8c821',
+        user: {
+          login: 'Codertocat',
+          id: 21031067,
+          node_id: 'MDQ6VXNlcjIxMDMxMDY3'
+        },
+        repo: {
+          id: 186853002,
+          node_id: 'MDEwOlJlcG9zaXRvcnkxODY4NTMwMDI=',
+          name: 'Hello-World',
+          full_name: 'Codertocat/Hello-World'
+        }
+      },
+      base: {
+        label: 'Codertocat:master',
+        ref: 'master',
+        sha: 'f95f852bd8fca8fcc58a9a2d6c842781e32a215e',
+        user: {
+          login: 'Codertocat',
+          id: 21031067,
+          node_id: 'MDQ6VXNlcjIxMDMxMDY3'
+        },
+        repo: {
+          id: 186853002,
+          node_id: 'MDEwOlJlcG9zaXRvcnkxODY4NTMwMDI=',
+          name: 'Hello-World',
+          full_name: 'Codertocat/Hello-World'
+        }
+      },
+      author_association: 'OWNER',
+      mergeable: null,
+    },
+    repository: {
+      id: 186853002,
+      node_id: 'MDEwOlJlcG9zaXRvcnkxODY4NTMwMDI=',
+      name: 'Hello-World',
+      full_name: 'Codertocat/Hello-World'
+    },
+    sender: {
+      login: 'Codertocat',
+      id: 21031067,
+      node_id: 'MDQ6VXNlcjIxMDMxMDY3'
+    }
+  }
 
   describe('for labels', () => {
     it('gets a matching label', async () => {
@@ -520,6 +587,117 @@ describe('queries', () => {
     expect(pullRequests[1].node.number).toBe(64)
     expect(pullRequests[1].node.mergeable).toBe('MERGEABLE')
     expect(pullRequests[1].node.labels.edges.length).toBe(0)
+  })
+
+  it('retries gathering a specific pull request', async () => {
+    const scope = nock('https://api.github.com', {
+      reqheaders: {
+        authorization: 'token justafaketoken'
+      }
+    })
+    .post('/graphql', /\"variables\":{\"owner\":\"some-owner\",\"repo\":\"some-repo\",\"number\":2}/)
+      .reply(200, {
+        data: {
+          repository: {
+            pullRequest: {
+              id: 'MDExOlB1bGxSZXF1ZXN0NTk3NDgzNjg4',
+              number: mockPullRequestEvent.number,
+              mergeable: 'UNKNOWN',
+              potentialMergeCommit: {
+                oid: '8b0ec723ab52932bf3476b711df72f762742bede'
+              },
+              labels: {
+                edges: [
+                  {
+                    node: {
+                      id: 'MDU6TGFiZWwxNTI3NTYzMTMy',
+                      name: 'Failed'
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        }
+      })
+      .post('/graphql', /\"variables\":{\"owner\":\"some-owner\",\"repo\":\"some-repo\",\"number\":2}/)
+      .reply(200, {
+        data: {
+          repository: {
+            pullRequest: {
+              id: 'MDExOlB1bGxSZXF1ZXN0NTk3NDgzNjg4',
+              number: mockPullRequestEvent.number,
+              mergeable: 'MERGEABLE',
+              potentialMergeCommit: {
+                oid: '8b0ec723ab52932bf3476b711df72f762742bede'
+              },
+              labels: {
+                edges: [
+                  {
+                    node: {
+                      id: 'MDU6TGFiZWwxNTI3NTYzMTMy',
+                      name: 'Failed'
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        }
+      })
+
+    const octokit = github.getOctokit('justafaketoken')
+    const start = new Date()
+    const pullRequest = await gatherPullRequest(octokit, github.context, mockPullRequestEvent as any, 25, 2)
+    const end = new Date()
+    var delta = Math.abs(end.getTime() - start.getTime())
+    
+    expect(delta).toBeGreaterThan(45)
+    expect(delta).toBeLessThan(75)
+    
+    expect(pullRequest.id).toBe('MDExOlB1bGxSZXF1ZXN0NTk3NDgzNjg4')
+    expect(pullRequest.number).toBe(mockPullRequestEvent.number)
+    expect(pullRequest.mergeable).toBe('MERGEABLE')
+    expect(pullRequest.labels.edges.length).toBe(1)
+  })
+
+  it('throws when unknown on specific pull request', async () => {
+    const scope = nock('https://api.github.com', {
+      reqheaders: {
+        authorization: 'token justafaketoken'
+      }
+    })
+    .post('/graphql', /\"variables\":{\"owner\":\"some-owner\",\"repo\":\"some-repo\",\"number\":2}/)
+      .times(3)
+      .reply(200, {
+        data: {
+          repository: {
+            pullRequest: {
+              id: 'MDExOlB1bGxSZXF1ZXN0NTk3NDgzNjg4',
+              number: mockPullRequestEvent.number,
+              mergeable: 'UNKNOWN',
+              potentialMergeCommit: {
+                oid: '8b0ec723ab52932bf3476b711df72f762742bede'
+              },
+              labels: {
+                edges: [
+                  {
+                    node: {
+                      id: 'MDU6TGFiZWwxNTI3NTYzMTMy',
+                      name: 'Failed'
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        }
+      })
+
+    const octokit = github.getOctokit('justafaketoken')
+    const pullRequest =  gatherPullRequest(octokit, github.context, mockPullRequestEvent as any, 25, 2)
+
+    await expect(pullRequest).rejects.toThrowError(/Could not determine mergeable status/)
   })
 
   describe('modifies labels', () => {
