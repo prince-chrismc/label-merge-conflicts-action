@@ -13,18 +13,20 @@ export interface IGithubRepoLabels {
   }
 }
 
-export interface IGithubPRNode {
-  node: {
-    id: string
-    number: number
-    mergeable: string
-    potentialMergeCommit: {
-      oid: string
-    }
-    labels: {
-      edges: IGithubLabelNode[]
-    }
+export interface IGithubPullRequest {
+  id: string
+  number: number
+  mergeable: string
+  potentialMergeCommit: {
+    oid: string
   }
+  labels: {
+    edges: IGithubLabelNode[]
+  }
+}
+
+export interface IGithubPRNode {
+  node: IGithubPullRequest
 }
 
 export interface IGithubPageInfo {
@@ -32,7 +34,13 @@ export interface IGithubPageInfo {
   hasNextPage: boolean
 }
 
-export interface IGithubRepoPullRequets {
+export interface IGithubRepoPullRequest {
+  repository: {
+    pullRequest: IGithubPullRequest
+  }
+}
+
+export interface IGithubRepoPullRequests {
   repository: {
     pullRequests: {
       edges: IGithubPRNode[]

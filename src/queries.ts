@@ -1,12 +1,19 @@
 import {Context} from '@actions/github/lib/context'
 import {GitHub} from '@actions/github/lib/utils'
-import {IGithubPRNode, IGithubRepoLabels, IGithubRepoPullRequets, IGitHubFileChange} from './interfaces'
+import {
+  IGithubPRNode,
+  IGithubRepoLabels,
+  IGithubRepoPullRequests,
+  IGitHubFileChange,
+  IGithubRepoPullRequest,
+  IGithubPullRequest
+} from './interfaces'
 
 const getPullRequestPages = async (
   octokit: InstanceType<typeof GitHub>,
   context: Context,
   cursor?: string
-): Promise<IGithubRepoPullRequets> => {
+): Promise<IGithubRepoPullRequests> => {
   const after = `, after: "${cursor}"`
   const query = `{
     repository(owner: "${context.repo.owner}", name: "${context.repo.repo}") {
@@ -58,6 +65,40 @@ export const getPullRequests = async (
   } while (hasNextPage)
 
   return pullrequests
+}
+
+export const getPullRequest = async (
+  octokit: InstanceType<typeof GitHub>,
+  context: Context,
+  number: number
+): Promise<IGithubPullRequest> => {
+  const query = `query ($owner: String!, $name: String!, $number: Int!) { 
+    repository(owner:$owner name:$name) {
+      pullRequest(number: $number) {
+        id
+        number
+        mergeable
+        potentialMergeCommit {
+          oid
+        }
+        labels(first: 100) {
+          edges {
+            node {
+              id
+              name
+            }
+          }
+        }
+      }
+    }
+  }`
+
+  const repoPr: IGithubRepoPullRequest = await octokit.graphql(query, {
+    ...context.repo,
+    number
+  })
+
+  return repoPr.repository.pullRequest
 }
 
 export const getLabels = async (

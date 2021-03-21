@@ -11,7 +11,8 @@ import {
   addLabelToLabelable,
   removeLabelFromLabelable,
   getPullRequestChanges,
-  getCommitChanges
+  getCommitChanges,
+  getPullRequest
 } from '../src/queries'
 import {checkPullRequestForMergeChanges, gatherPullRequests} from '../src/pulls'
 import {updatePullRequestConflictLabel} from '../src/label'
@@ -285,6 +286,47 @@ describe('queries', () => {
       expect(pullRequests[0].node.number).toBe(7)
       expect(pullRequests[0].node.mergeable).toBe('MERGEABLE')
       expect(pullRequests[0].node.labels.edges.length).toBe(0)
+    })
+
+    it('get a specific pull request', async () => {
+      const scope = nock('https://api.github.com', {
+        reqheaders: {
+          authorization: 'token justafaketoken'
+        }
+      })
+        .post('/graphql', /\"variables\":{\"owner\":\"some-owner\",\"repo\":\"some-repo\",\"number\":49}/)
+        .reply(200, {
+          data: {
+            repository: {
+              pullRequest: {
+                id: 'MDExOlB1bGxSZXF1ZXN0NTk3NDgzNjg4',
+                number: 49,
+                mergeable: 'MERGEABLE',
+                potentialMergeCommit: {
+                  oid: '8b0ec723ab52932bf3476b711df72f762742bede'
+                },
+                labels: {
+                  edges: [
+                    {
+                      node: {
+                        id: 'MDU6TGFiZWwxNTI3NTYzMTMy',
+                        name: 'Failed'
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        })
+
+      const octokit = github.getOctokit('justafaketoken')
+      const pullRequests = await getPullRequest(octokit, github.context, 49)
+
+      expect(pullRequests.id).toBe('MDExOlB1bGxSZXF1ZXN0NTk3NDgzNjg4')
+      expect(pullRequests.number).toBe(49)
+      expect(pullRequests.mergeable).toBe('MERGEABLE')
+      expect(pullRequests.labels.edges.length).toBe(1)
     })
 
     it('gets pages of pull requests', async () => {
