@@ -387,7 +387,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.run = void 0;
+exports.runOnAll = exports.runOnPullRequest = exports.run = void 0;
 const core = __importStar(__nccwpck_require__(2186));
 const github = __importStar(__nccwpck_require__(5438));
 const queries_1 = __nccwpck_require__(775);
@@ -408,25 +408,9 @@ function run() {
             // Get the label to use
             const conflictLabel = util_1.findLabelByName(yield queries_1.getLabels(octokit, github.context, conflictLabelName), conflictLabelName);
             if (github.context.eventName === 'pull_request') {
-                const prEvent = github.context.payload;
-                core.startGroup(`🔎 Gather data for Pull Request #${prEvent.number}`);
-                core.info(` -- Mergeable: ${prEvent.pull_request.mergeable}`);
-                core.info(` -- Labels: ${prEvent.pull_request.labels[0].name}`);
-                const pr = yield pulls_1.gatherPullRequest(octokit, github.context, prEvent, waitMs, maxRetries);
-                core.endGroup();
-                core.startGroup('🏷️ Updating labels');
-                yield label_1.updatePullRequestConflictLabel(octokit, github.context, pr, conflictLabel, detectMergeChanges);
-                core.endGroup();
-                return;
+                return yield runOnPullRequest(octokit, github.context, conflictLabel, waitMs, maxRetries, detectMergeChanges);
             }
-            core.startGroup('🔎 Gather data for all Pull Requests');
-            const pullRequests = yield pulls_1.gatherPullRequests(octokit, github.context, waitMs, maxRetries);
-            core.endGroup();
-            core.startGroup('🏷️ Updating labels');
-            for (const pullRequest of pullRequests) {
-                yield label_1.updatePullRequestConflictLabel(octokit, github.context, pullRequest.node, conflictLabel, detectMergeChanges);
-            }
-            core.endGroup();
+            yield runOnAll(octokit, github.context, conflictLabel, waitMs, maxRetries, detectMergeChanges);
         }
         catch (error) {
             core.setFailed(error.message);
@@ -434,6 +418,31 @@ function run() {
     });
 }
 exports.run = run;
+function runOnPullRequest(octokit, context, conflictLabel, waitMs, maxRetries, detectMergeChanges) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const prEvent = context.payload;
+        core.startGroup(`🔎 Gather data for Pull Request #${prEvent.number}`);
+        const pr = yield pulls_1.gatherPullRequest(octokit, context, prEvent, waitMs, maxRetries);
+        core.endGroup();
+        core.startGroup('🏷️ Updating labels');
+        yield label_1.updatePullRequestConflictLabel(octokit, context, pr, conflictLabel, detectMergeChanges);
+        core.endGroup();
+    });
+}
+exports.runOnPullRequest = runOnPullRequest;
+function runOnAll(octokit, context, conflictLabel, waitMs, maxRetries, detectMergeChanges) {
+    return __awaiter(this, void 0, void 0, function* () {
+        core.startGroup('🔎 Gather data for all Pull Requests');
+        const pullRequests = yield pulls_1.gatherPullRequests(octokit, context, waitMs, maxRetries);
+        core.endGroup();
+        core.startGroup('🏷️ Updating labels');
+        for (const pullRequest of pullRequests) {
+            yield label_1.updatePullRequestConflictLabel(octokit, context, pullRequest.node, conflictLabel, detectMergeChanges);
+        }
+        core.endGroup();
+    });
+}
+exports.runOnAll = runOnAll;
 
 
 /***/ }),

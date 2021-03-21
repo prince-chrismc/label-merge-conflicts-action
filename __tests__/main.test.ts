@@ -132,6 +132,7 @@ describe('queries', () => {
     })
     github.context.ref = 'refs/heads/some-ref'
     github.context.sha = '1234567890123456789012345678901234567890'
+    github.context.eventName = 'push'
   })
 
   beforeEach(() => {
@@ -143,6 +144,7 @@ describe('queries', () => {
     // Restore @actions/github context
     github.context.ref = originalContext.ref
     github.context.sha = originalContext.sha
+    github.context.eventName = originalContext.eventName
 
     // Restore
     jest.restoreAllMocks()
