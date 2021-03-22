@@ -139,6 +139,8 @@ describe('queries', () => {
   beforeEach(() => {
     // Reset inputs
     inputs = {}
+    github.context.eventName = originalContext.eventName
+    github.context.payload = originalContext.payload
   })
 
   afterAll(() => {
@@ -1392,7 +1394,7 @@ describe('queries', () => {
   })
 
   describe('the whole sequence', () => {
-    test('works', async () => {
+    test('push event works', async () => {
       const scope = nock('https://api.github.com', {
         reqheaders: {
           authorization: 'token justafaketoken'
@@ -1519,6 +1521,87 @@ describe('queries', () => {
                 pageInfo: {
                   endCursor: 'Y3Vyc29yOnYyOpHOG4ePwQ==',
                   hasNextPage: false
+                }
+              }
+            }
+          }
+        })
+        .post(
+          '/graphql',
+          /addLabelsToLabelable.*{labelIds: \[.*"MDU6TGFiZWwyNzYwMjE1ODI0.*\], labelableId: .*"MDExOlB1bGxSZXF1ZXN0NDQzNTg3NjI1.*"}/
+        )
+        .reply(200, {data: {}})
+
+      const mock = jest.spyOn(core, 'setFailed').mockImplementation(jest.fn())
+
+      inputs['conflict_label_name'] = 'expected_label'
+      inputs['github_token'] = 'justafaketoken'
+      // inputs['max_retries'] = '1'
+      inputs['wait_ms'] = '25'
+      await run()
+
+      expect(mock).not.toBeCalled()
+    })
+
+    test('pull_request event works', async () => {
+      jest.setTimeout(500000000)
+      github.context.eventName = 'pull_request'
+      github.context.payload = mockPullRequestEvent as any
+
+      const scope = nock('https://api.github.com', {
+        reqheaders: {
+          authorization: 'token justafaketoken'
+        }
+      })
+        .post('/graphql')
+        .reply(200, {
+          data: {repository: {labels: {edges: [{node: {id: 'MDU6TGFiZWwyNzYwMjE1ODI0', name: 'expected_label'}}]}}}
+        })
+        .post('/graphql', /\"variables\":{\"owner\":\"some-owner\",\"repo\":\"some-repo\",\"number\":2}/)
+        .reply(200, {
+          data: {
+            repository: {
+              pullRequest: {
+                id: 'MDExOlB1bGxSZXF1ZXN0NDQzNTg3NjI1',
+                number: mockPullRequestEvent.number,
+                mergeable: 'UNKNOWN',
+                potentialMergeCommit: {
+                  oid: 'dbe715994ec0bd51813f9e2b3e250c3e6b7dcf30'
+                },
+                labels: {
+                  edges: [
+                    {
+                      node: {
+                        id: 'MDU6TGFiZWwxNTI3NTYzMTMy',
+                        name: 'Failed'
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        })
+        .post('/graphql', /\"variables\":{\"owner\":\"some-owner\",\"repo\":\"some-repo\",\"number\":2}/)
+        .reply(200, {
+          data: {
+            repository: {
+              pullRequest: {
+                id: 'MDExOlB1bGxSZXF1ZXN0NDQzNTg3NjI1',
+                number: mockPullRequestEvent.number,
+                mergeable: 'CONFLICTING',
+                potentialMergeCommit: {
+                  oid: 'dbe715994ec0bd51813f9e2b3e250c3e6b7dcf30'
+                },
+                labels: {
+                  edges: [
+                    {
+                      node: {
+                        id: 'MDU6TGFiZWwxNTI3NTYzMTMy',
+                        name: 'Failed'
+                      }
+                    }
+                  ]
                 }
               }
             }
