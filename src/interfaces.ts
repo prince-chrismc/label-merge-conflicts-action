@@ -1,19 +1,19 @@
-export interface IGithubLabelNode {
+export interface IGitHubLabelNode {
   node: {
     id: string
     name: string
   }
 }
 
-export interface IGithubRepoLabels {
+export interface IGitHubRepoLabels {
   repository: {
     labels: {
-      edges: IGithubLabelNode[]
+      edges: IGitHubLabelNode[]
     }
   }
 }
 
-export interface IGithubPullRequest {
+export interface IGitHubPullRequest {
   id: string
   number: number
   mergeable: string
@@ -21,30 +21,30 @@ export interface IGithubPullRequest {
     oid: string
   }
   labels: {
-    edges: IGithubLabelNode[]
+    edges: IGitHubLabelNode[]
   }
 }
 
-export interface IGithubPRNode {
-  node: IGithubPullRequest
+export interface IGitHubPRNode {
+  node: IGitHubPullRequest
 }
 
-export interface IGithubPageInfo {
+export interface IGitHubPageInfo {
   endCursor: string
   hasNextPage: boolean
 }
 
-export interface IGithubRepoPullRequest {
+export interface IGitHubRepoPullRequest {
   repository: {
-    pullRequest: IGithubPullRequest
+    pullRequest: IGitHubPullRequest
   }
 }
 
-export interface IGithubRepoPullRequests {
+export interface IGitHubRepoPullRequests {
   repository: {
     pullRequests: {
-      edges: IGithubPRNode[]
-      pageInfo: IGithubPageInfo
+      edges: IGitHubPRNode[]
+      pageInfo: IGitHubPageInfo
     }
   }
 }

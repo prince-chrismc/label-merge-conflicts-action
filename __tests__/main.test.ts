@@ -3,7 +3,7 @@ import * as github from '@actions/github'
 import nock from 'nock'
 
 import {wait} from '../src/wait'
-import {IGithubRepoLabels, IGithubPRNode, IGithubLabelNode, IGithubPullRequest} from '../src/interfaces'
+import {IGitHubRepoLabels, IGitHubPRNode, IGitHubLabelNode, IGitHubPullRequest} from '../src/interfaces'
 import {findLabelByName, isAlreadyLabeled} from '../src/util'
 import {
   getLabels,
@@ -35,14 +35,14 @@ test('wait 500 ms', async () => {
 describe('label matching', () => {
   test('find exact from one label', () => {
     const labelNode = {node: {id: '1654984416', name: 'expected_label'}}
-    const labelData: IGithubRepoLabels = {repository: {labels: {edges: [labelNode]}}}
+    const labelData: IGitHubRepoLabels = {repository: {labels: {edges: [labelNode]}}}
     const node = findLabelByName(labelData, 'expected_label')
     expect(node).toBe(labelNode)
   })
 
   test('finds from many labels', () => {
     const labelNode = {node: {id: '1654984416', name: 'expected_label'}}
-    const labelData: IGithubRepoLabels = {
+    const labelData: IGitHubRepoLabels = {
       repository: {labels: {edges: [{node: {id: 'MDU6TGFiZWwxMjUyNDcxNTgz', name: 'has conflicts'}}, labelNode]}}
     }
     const node = findLabelByName(labelData, 'expected_label')
@@ -50,7 +50,7 @@ describe('label matching', () => {
   })
 
   test('throws when no match', () => {
-    const labelData: IGithubRepoLabels = {
+    const labelData: IGitHubRepoLabels = {
       repository: {
         labels: {
           edges: [
@@ -67,8 +67,8 @@ describe('label matching', () => {
 })
 
 describe('pr label checking', () => {
-  const expectedLabel: IGithubLabelNode = {node: {id: '1654984416', name: 'expected_label'}}
-  const makePr = (...label: IGithubLabelNode[]): IGithubPullRequest => {
+  const expectedLabel: IGitHubLabelNode = {node: {id: '1654984416', name: 'expected_label'}}
+  const makePr = (...label: IGitHubLabelNode[]): IGitHubPullRequest => {
     return {
       id: 'MDExOlB1bGxSZXF1ZXN0NTc4ODgyNDUw',
       number: 7,
@@ -968,7 +968,7 @@ describe('queries', () => {
     })
 
     describe('determines changes', () => {
-      const prNode: IGithubPRNode = {
+      const prNode: IGitHubPRNode = {
         node: {
           id: 'MDExOlB1bGxSZXF1ZXN0NTc4ODgyNDUw',
           number: 7,
@@ -1091,8 +1091,8 @@ describe('queries', () => {
   })
 
   describe('correctly determines labeling', () => {
-    const expectedLabel: IGithubLabelNode = {node: {id: 'MDU6TGFiZWwyNzYwMjE1ODI0', name: 'expected_label'}}
-    const makePr = (mergeable: string, ...label: IGithubLabelNode[]): IGithubPullRequest => {
+    const expectedLabel: IGitHubLabelNode = {node: {id: 'MDU6TGFiZWwyNzYwMjE1ODI0', name: 'expected_label'}}
+    const makePr = (mergeable: string, ...label: IGitHubLabelNode[]): IGitHubPullRequest => {
       return {
         id: 'MDExOlB1bGxSZXF1ZXN0NTc4ODgyNDUw',
         number: 7,

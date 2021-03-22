@@ -2,7 +2,7 @@ import * as core from '@actions/core'
 import {Context} from '@actions/github/lib/context'
 import {GitHub} from '@actions/github/lib/utils'
 
-import {IGithubPullRequest, IGithubLabelNode} from './interfaces'
+import {IGitHubPullRequest, IGitHubLabelNode} from './interfaces'
 import {checkPullRequestForMergeChanges} from './pulls'
 import {addLabelToLabelable, removeLabelFromLabelable} from './queries'
 import {isAlreadyLabeled} from './util'
@@ -30,8 +30,8 @@ async function applyLabelable(
 export async function updatePullRequestConflictLabel(
   octokit: InstanceType<typeof GitHub>,
   context: Context,
-  pullRequest: IGithubPullRequest,
-  conflictLabel: IGithubLabelNode,
+  pullRequest: IGitHubPullRequest,
+  conflictLabel: IGitHubLabelNode,
   detectMergeChanges: boolean
 ): Promise<void> {
   const hasLabel = isAlreadyLabeled(pullRequest, conflictLabel)

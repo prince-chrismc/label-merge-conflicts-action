@@ -167,7 +167,7 @@ function gatherPullRequests(octokit, context, waitMs, maxRetries) {
             pullRequests = yield queries_1.getPullRequests(octokit, context);
             pullrequestsWithoutMergeStatus = util_1.getPullrequestsWithoutMergeStatus(pullRequests); // filter PRs with unknown mergeable status
         } while (pullrequestsWithoutMergeStatus.length > 0 && maxRetries >= tries);
-        // after $maxRetries we give up, probably Github had some issues
+        // after $maxRetries we give up, probably GitHub had some issues
         if (pullrequestsWithoutMergeStatus.length > 0) {
             // Only set failed so that we can proccess the rest of the pull requests the do have mergeable calculated
             core.setFailed(`Could not determine mergeable status for: #${pullrequestsWithoutMergeStatus

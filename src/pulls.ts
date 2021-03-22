@@ -3,7 +3,7 @@ import {Context} from '@actions/github/lib/context'
 import {GitHub} from '@actions/github/lib/utils'
 import {PullRequestEvent} from '@octokit/webhooks-definitions/schema'
 
-import {IGithubPRNode, IGithubPullRequest} from './interfaces'
+import {IGitHubPRNode, IGitHubPullRequest} from './interfaces'
 import {wait} from './wait'
 import {getCommitChanges, getPullRequestChanges, getPullRequests, getPullRequest} from './queries'
 import {getPullrequestsWithoutMergeStatus} from './util'
@@ -14,9 +14,9 @@ export async function gatherPullRequest(
   prEvent: PullRequestEvent,
   waitMs: number,
   maxRetries: number
-): Promise<IGithubPullRequest> {
+): Promise<IGitHubPullRequest> {
   let tries = 0
-  let pullRequest: IGithubPullRequest
+  let pullRequest: IGitHubPullRequest
   let uknownStatus: boolean = typeof prEvent.pull_request.mergeable !== 'boolean'
 
   do {
@@ -44,10 +44,10 @@ export async function gatherPullRequests(
   context: Context,
   waitMs: number,
   maxRetries: number
-): Promise<IGithubPRNode[]> {
+): Promise<IGitHubPRNode[]> {
   let tries = 0
-  let pullRequests: IGithubPRNode[] = []
-  let pullrequestsWithoutMergeStatus: IGithubPRNode[] = []
+  let pullRequests: IGitHubPRNode[] = []
+  let pullrequestsWithoutMergeStatus: IGitHubPRNode[] = []
 
   do {
     tries++
@@ -61,7 +61,7 @@ export async function gatherPullRequests(
     pullrequestsWithoutMergeStatus = getPullrequestsWithoutMergeStatus(pullRequests) // filter PRs with unknown mergeable status
   } while (pullrequestsWithoutMergeStatus.length > 0 && maxRetries >= tries)
 
-  // after $maxRetries we give up, probably Github had some issues
+  // after $maxRetries we give up, probably GitHub had some issues
   if (pullrequestsWithoutMergeStatus.length > 0) {
     // Only set failed so that we can proccess the rest of the pull requests the do have mergeable calculated
     core.setFailed(
@@ -79,7 +79,7 @@ export async function gatherPullRequests(
 export const checkPullRequestForMergeChanges = async (
   octokit: InstanceType<typeof GitHub>,
   context: Context,
-  pullRequest: IGithubPullRequest
+  pullRequest: IGitHubPullRequest
 ): Promise<boolean> => {
   const prChangedFiles = await getPullRequestChanges(octokit, context, pullRequest.number)
   const mergeChangedFiles = await getCommitChanges(octokit, context, pullRequest.potentialMergeCommit.oid)

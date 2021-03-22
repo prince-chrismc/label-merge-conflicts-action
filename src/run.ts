@@ -8,7 +8,7 @@ import {getLabels} from './queries'
 import {findLabelByName} from './util'
 import {gatherPullRequest, gatherPullRequests} from './pulls'
 import {updatePullRequestConflictLabel} from './label'
-import {IGithubLabelNode} from './interfaces'
+import {IGitHubLabelNode} from './interfaces'
 
 export async function run(): Promise<void> {
   try {
@@ -42,7 +42,7 @@ export async function run(): Promise<void> {
 export async function runOnPullRequest(
   octokit: InstanceType<typeof GitHub>,
   context: Context,
-  conflictLabel: IGithubLabelNode,
+  conflictLabel: IGitHubLabelNode,
   waitMs: number,
   maxRetries: number,
   detectMergeChanges: boolean
@@ -60,7 +60,7 @@ export async function runOnPullRequest(
 export async function runOnAll(
   octokit: InstanceType<typeof GitHub>,
   context: Context,
-  conflictLabel: IGithubLabelNode,
+  conflictLabel: IGitHubLabelNode,
   waitMs: number,
   maxRetries: number,
   detectMergeChanges: boolean
