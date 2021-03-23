@@ -2,7 +2,7 @@ import * as core from '@actions/core'
 import {Context} from '@actions/github/lib/context'
 import {GitHub} from '@actions/github/lib/utils'
 
-import {IGithubPRNode, IGithubLabelNode} from './interfaces'
+import {IGitHubPullRequest, IGitHubLabelNode} from './interfaces'
 import {checkPullRequestForMergeChanges} from './pulls'
 import {addLabelToLabelable, removeLabelFromLabelable} from './queries'
 import {isAlreadyLabeled} from './util'
@@ -30,26 +30,26 @@ async function applyLabelable(
 export async function updatePullRequestConflictLabel(
   octokit: InstanceType<typeof GitHub>,
   context: Context,
-  pullRequest: IGithubPRNode,
-  conflictLabel: IGithubLabelNode,
+  pullRequest: IGitHubPullRequest,
+  conflictLabel: IGitHubLabelNode,
   detectMergeChanges: boolean
 ): Promise<void> {
   const hasLabel = isAlreadyLabeled(pullRequest, conflictLabel)
-  const labelable: Labelable = {labelId: conflictLabel.node.id, labelableId: pullRequest.node.id}
+  const labelable: Labelable = {labelId: conflictLabel.node.id, labelableId: pullRequest.id}
 
-  switch (pullRequest.node.mergeable) {
+  switch (pullRequest.mergeable) {
     case 'CONFLICTING':
-      await applyLabelable(octokit, labelable, hasLabel, pullRequest.node.number)
+      await applyLabelable(octokit, labelable, hasLabel, pullRequest.number)
       break
 
     case 'MERGEABLE':
       if (detectMergeChanges && (await checkPullRequestForMergeChanges(octokit, context, pullRequest))) {
-        await applyLabelable(octokit, labelable, hasLabel, pullRequest.node.number)
+        await applyLabelable(octokit, labelable, hasLabel, pullRequest.number)
         break
       }
 
       if (hasLabel) {
-        core.info(`Unmarking #${pullRequest.node.number}...`)
+        core.info(`Unmarking #${pullRequest.number}...`)
         await removeLabelFromLabelable(octokit, labelable)
       }
       break

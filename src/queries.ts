@@ -1,12 +1,19 @@
 import {Context} from '@actions/github/lib/context'
 import {GitHub} from '@actions/github/lib/utils'
-import {IGithubPRNode, IGithubRepoLabels, IGithubRepoPullRequets, IGitHubFileChange} from './interfaces'
+import {
+  IGitHubPRNode,
+  IGitHubRepoLabels,
+  IGitHubRepoPullRequests,
+  IGitHubFileChange,
+  IGitHubRepoPullRequest,
+  IGitHubPullRequest
+} from './interfaces'
 
 const getPullRequestPages = async (
   octokit: InstanceType<typeof GitHub>,
   context: Context,
   cursor?: string
-): Promise<IGithubRepoPullRequets> => {
+): Promise<IGitHubRepoPullRequests> => {
   const after = `, after: "${cursor}"`
   const query = `{
     repository(owner: "${context.repo.owner}", name: "${context.repo.repo}") {
@@ -44,8 +51,8 @@ const getPullRequestPages = async (
 export const getPullRequests = async (
   octokit: InstanceType<typeof GitHub>,
   context: Context
-): Promise<IGithubPRNode[]> => {
-  let pullrequests: IGithubPRNode[] = []
+): Promise<IGitHubPRNode[]> => {
+  let pullrequests: IGitHubPRNode[] = []
   let cursor: string | undefined
   let hasNextPage = false
 
@@ -60,11 +67,45 @@ export const getPullRequests = async (
   return pullrequests
 }
 
+export const getPullRequest = async (
+  octokit: InstanceType<typeof GitHub>,
+  context: Context,
+  number: number
+): Promise<IGitHubPullRequest> => {
+  const query = `query ($owner: String!, $repo: String!, $number: Int!) { 
+    repository(owner:$owner name:$repo) {
+      pullRequest(number: $number) {
+        id
+        number
+        mergeable
+        potentialMergeCommit {
+          oid
+        }
+        labels(first: 100) {
+          edges {
+            node {
+              id
+              name
+            }
+          }
+        }
+      }
+    }
+  }`
+
+  const repoPr: IGitHubRepoPullRequest = await octokit.graphql(query, {
+    ...context.repo,
+    number
+  })
+
+  return repoPr.repository.pullRequest
+}
+
 export const getLabels = async (
   octokit: InstanceType<typeof GitHub>,
   context: Context,
   labelName: string
-): Promise<IGithubRepoLabels> => {
+): Promise<IGitHubRepoLabels> => {
   const query = `{
     repository(owner: "${context.repo.owner}", name: "${context.repo.repo}") {
       labels(first: 100, query: "${labelName}") {

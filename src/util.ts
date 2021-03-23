@@ -1,20 +1,20 @@
-import {IGithubPRNode, IGithubLabelNode, IGithubRepoLabels} from './interfaces'
+import {IGitHubPRNode, IGitHubPullRequest, IGitHubLabelNode, IGitHubRepoLabels} from './interfaces'
 
-export function getPullrequestsWithoutMergeStatus(pullrequests: IGithubPRNode[]): IGithubPRNode[] {
-  return pullrequests.filter((pullrequest: IGithubPRNode) => {
+export function getPullrequestsWithoutMergeStatus(pullrequests: IGitHubPRNode[]): IGitHubPRNode[] {
+  return pullrequests.filter((pullrequest: IGitHubPRNode) => {
     return pullrequest.node.mergeable === 'UNKNOWN'
   })
 }
 
-export function isAlreadyLabeled(pullrequest: IGithubPRNode, label: IGithubLabelNode): boolean {
+export function isAlreadyLabeled(pullrequest: IGitHubPullRequest, label: IGitHubLabelNode): boolean {
   return (
-    pullrequest.node.labels.edges.find((l: IGithubLabelNode) => {
+    pullrequest.labels.edges.find((l: IGitHubLabelNode) => {
       return l.node.id === label.node.id
     }) !== undefined
   )
 }
 
-export function findLabelByName(labelData: IGithubRepoLabels, labelName: string): IGithubLabelNode {
+export function findLabelByName(labelData: IGitHubRepoLabels, labelName: string): IGitHubLabelNode {
   for (const label of labelData.repository.labels.edges) {
     if (label.node.name === labelName) {
       return label

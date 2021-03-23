@@ -1,42 +1,50 @@
-export interface IGithubLabelNode {
+export interface IGitHubLabelNode {
   node: {
     id: string
     name: string
   }
 }
 
-export interface IGithubRepoLabels {
+export interface IGitHubRepoLabels {
   repository: {
     labels: {
-      edges: IGithubLabelNode[]
+      edges: IGitHubLabelNode[]
     }
   }
 }
 
-export interface IGithubPRNode {
-  node: {
-    id: string
-    number: number
-    mergeable: string
-    potentialMergeCommit: {
-      oid: string
-    }
-    labels: {
-      edges: IGithubLabelNode[]
-    }
+export interface IGitHubPullRequest {
+  id: string
+  number: number
+  mergeable: string
+  potentialMergeCommit: {
+    oid: string
+  }
+  labels: {
+    edges: IGitHubLabelNode[]
   }
 }
 
-export interface IGithubPageInfo {
+export interface IGitHubPRNode {
+  node: IGitHubPullRequest
+}
+
+export interface IGitHubPageInfo {
   endCursor: string
   hasNextPage: boolean
 }
 
-export interface IGithubRepoPullRequets {
+export interface IGitHubRepoPullRequest {
+  repository: {
+    pullRequest: IGitHubPullRequest
+  }
+}
+
+export interface IGitHubRepoPullRequests {
   repository: {
     pullRequests: {
-      edges: IGithubPRNode[]
-      pageInfo: IGithubPageInfo
+      edges: IGitHubPRNode[]
+      pageInfo: IGitHubPageInfo
     }
   }
 }

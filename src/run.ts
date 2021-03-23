@@ -1,9 +1,14 @@
 import * as core from '@actions/core'
 import * as github from '@actions/github'
+import {Context} from '@actions/github/lib/context'
+import {GitHub} from '@actions/github/lib/utils'
+import {PullRequestEvent} from '@octokit/webhooks-definitions/schema'
+
 import {getLabels} from './queries'
 import {findLabelByName} from './util'
-import {gatherPullRequests} from './pulls'
+import {gatherPullRequest, gatherPullRequests} from './pulls'
 import {updatePullRequestConflictLabel} from './label'
+import {IGitHubLabelNode} from './interfaces'
 
 export async function run(): Promise<void> {
   try {
@@ -24,16 +29,49 @@ export async function run(): Promise<void> {
       conflictLabelName
     )
 
-    core.startGroup('🔎 Gather Pull Request Data')
-    const pullRequests = await gatherPullRequests(octokit, github.context, waitMs, maxRetries)
-    core.endGroup()
-
-    core.startGroup('🏷️ Updating labels')
-    for (const pullRequest of pullRequests) {
-      await updatePullRequestConflictLabel(octokit, github.context, pullRequest, conflictLabel, detectMergeChanges)
+    if (github.context.eventName === 'pull_request') {
+      return await runOnPullRequest(octokit, github.context, conflictLabel, waitMs, maxRetries, detectMergeChanges)
     }
-    core.endGroup()
+
+    await runOnAll(octokit, github.context, conflictLabel, waitMs, maxRetries, detectMergeChanges)
   } catch (error) {
     core.setFailed(error.message)
   }
+}
+
+export async function runOnPullRequest(
+  octokit: InstanceType<typeof GitHub>,
+  context: Context,
+  conflictLabel: IGitHubLabelNode,
+  waitMs: number,
+  maxRetries: number,
+  detectMergeChanges: boolean
+): Promise<void> {
+  const prEvent = context.payload as PullRequestEvent
+  core.startGroup(`🔎 Gather data for Pull Request #${prEvent.number}`)
+  const pr = await gatherPullRequest(octokit, context, prEvent, waitMs, maxRetries)
+  core.endGroup()
+
+  core.startGroup('🏷️ Updating labels')
+  await updatePullRequestConflictLabel(octokit, context, pr, conflictLabel, detectMergeChanges)
+  core.endGroup()
+}
+
+export async function runOnAll(
+  octokit: InstanceType<typeof GitHub>,
+  context: Context,
+  conflictLabel: IGitHubLabelNode,
+  waitMs: number,
+  maxRetries: number,
+  detectMergeChanges: boolean
+): Promise<void> {
+  core.startGroup('🔎 Gather data for all Pull Requests')
+  const pullRequests = await gatherPullRequests(octokit, context, waitMs, maxRetries)
+  core.endGroup()
+
+  core.startGroup('🏷️ Updating labels')
+  for (const pullRequest of pullRequests) {
+    await updatePullRequestConflictLabel(octokit, context, pullRequest.node, conflictLabel, detectMergeChanges)
+  }
+  core.endGroup()
 }
