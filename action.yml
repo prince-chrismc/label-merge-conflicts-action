@@ -1,5 +1,5 @@
 name: "Label Merge Conflicts"
-description: 'Github Action to automatically label PRs with a "conflict" label'
+description: 'GitHub Action to automatically label PRs with a "conflict" label'
 author: "prince-chrismc"
 branding:
   icon: "alert-triangle"
@@ -9,7 +9,7 @@ inputs:
     description: "label name used to marked PRs with merge conflicts"
     required: true
   github_token:
-    description: "Github token / secret"
+    description: "GitHub token / secret"
     required: true
   max_retries:
     description: "number of times to retry on a failed mergable check"

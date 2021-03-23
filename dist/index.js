@@ -54,18 +54,18 @@ function applyLabelable(octokit, labelable, hasLabel, pullRequestNumber) {
 function updatePullRequestConflictLabel(octokit, context, pullRequest, conflictLabel, detectMergeChanges) {
     return __awaiter(this, void 0, void 0, function* () {
         const hasLabel = util_1.isAlreadyLabeled(pullRequest, conflictLabel);
-        const labelable = { labelId: conflictLabel.node.id, labelableId: pullRequest.node.id };
-        switch (pullRequest.node.mergeable) {
+        const labelable = { labelId: conflictLabel.node.id, labelableId: pullRequest.id };
+        switch (pullRequest.mergeable) {
             case 'CONFLICTING':
-                yield applyLabelable(octokit, labelable, hasLabel, pullRequest.node.number);
+                yield applyLabelable(octokit, labelable, hasLabel, pullRequest.number);
                 break;
             case 'MERGEABLE':
                 if (detectMergeChanges && (yield pulls_1.checkPullRequestForMergeChanges(octokit, context, pullRequest))) {
-                    yield applyLabelable(octokit, labelable, hasLabel, pullRequest.node.number);
+                    yield applyLabelable(octokit, labelable, hasLabel, pullRequest.number);
                     break;
                 }
                 if (hasLabel) {
-                    core.info(`Unmarking #${pullRequest.node.number}...`);
+                    core.info(`Unmarking #${pullRequest.number}...`);
                     yield queries_1.removeLabelFromLabelable(octokit, labelable);
                 }
                 break;
@@ -125,14 +125,33 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.checkPullRequestForMergeChanges = exports.gatherPullRequests = void 0;
+exports.checkPullRequestForMergeChanges = exports.gatherPullRequests = exports.gatherPullRequest = void 0;
 const core = __importStar(__nccwpck_require__(2186));
 const wait_1 = __nccwpck_require__(5817);
 const queries_1 = __nccwpck_require__(775);
 const util_1 = __nccwpck_require__(4024);
-// fetch PRs up to $maxRetries times
-// multiple fetches are necessary because Github computes the 'mergeable' status asynchronously, on request,
-// which might not be available directly after the merge
+function gatherPullRequest(octokit, context, prEvent, waitMs, maxRetries) {
+    return __awaiter(this, void 0, void 0, function* () {
+        let tries = 0;
+        let pullRequest;
+        let uknownStatus = typeof prEvent.pull_request.mergeable !== 'boolean';
+        do {
+            tries++;
+            if (uknownStatus) {
+                // on event trigger we still need to give it time to calc if it was unknown
+                core.info(`...waiting for mergeable info...`);
+                yield wait_1.wait(waitMs);
+            }
+            pullRequest = yield queries_1.getPullRequest(octokit, context, prEvent.number); // Always get it since the conversion is non-trivial
+            uknownStatus = pullRequest.mergeable === 'UNKNOWN';
+        } while (uknownStatus && maxRetries >= tries);
+        if (uknownStatus) {
+            throw new Error(`Could not determine mergeable status for: #${prEvent.number}`);
+        }
+        return pullRequest;
+    });
+}
+exports.gatherPullRequest = gatherPullRequest;
 function gatherPullRequests(octokit, context, waitMs, maxRetries) {
     return __awaiter(this, void 0, void 0, function* () {
         let tries = 0;
@@ -148,7 +167,7 @@ function gatherPullRequests(octokit, context, waitMs, maxRetries) {
             pullRequests = yield queries_1.getPullRequests(octokit, context);
             pullrequestsWithoutMergeStatus = util_1.getPullrequestsWithoutMergeStatus(pullRequests); // filter PRs with unknown mergeable status
         } while (pullrequestsWithoutMergeStatus.length > 0 && maxRetries >= tries);
-        // after $maxRetries we give up, probably Github had some issues
+        // after $maxRetries we give up, probably GitHub had some issues
         if (pullrequestsWithoutMergeStatus.length > 0) {
             // Only set failed so that we can proccess the rest of the pull requests the do have mergeable calculated
             core.setFailed(`Could not determine mergeable status for: #${pullrequestsWithoutMergeStatus
@@ -162,16 +181,16 @@ function gatherPullRequests(octokit, context, waitMs, maxRetries) {
 }
 exports.gatherPullRequests = gatherPullRequests;
 const checkPullRequestForMergeChanges = (octokit, context, pullRequest) => __awaiter(void 0, void 0, void 0, function* () {
-    const prChangedFiles = yield queries_1.getPullRequestChanges(octokit, context, pullRequest.node.number);
-    const mergeChangedFiles = yield queries_1.getCommitChanges(octokit, context, pullRequest.node.potentialMergeCommit.oid);
+    const prChangedFiles = yield queries_1.getPullRequestChanges(octokit, context, pullRequest.number);
+    const mergeChangedFiles = yield queries_1.getCommitChanges(octokit, context, pullRequest.potentialMergeCommit.oid);
     if (prChangedFiles.length !== mergeChangedFiles.length) {
-        core.info(`#${pullRequest.node.number} has a difference in the number of files`);
+        core.info(`#${pullRequest.number} has a difference in the number of files`);
         return true; // I'd be shocked if it was not!
     }
     // TODO: There's an assumption the files list should always be ordered the same which needs to be verified.
     for (let i = 0; i < prChangedFiles.length; i++) {
         if (prChangedFiles[i].sha !== mergeChangedFiles[i].sha) {
-            core.info(`#${pullRequest.node.number} has a mismatching SHA's`);
+            core.info(`#${pullRequest.number} has a mismatching SHA's`);
             return true;
         }
     }
@@ -197,7 +216,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.getCommitChanges = exports.getPullRequestChanges = exports.removeLabelFromLabelable = exports.addLabelToLabelable = exports.getLabels = exports.getPullRequests = void 0;
+exports.getCommitChanges = exports.getPullRequestChanges = exports.removeLabelFromLabelable = exports.addLabelToLabelable = exports.getLabels = exports.getPullRequest = exports.getPullRequests = void 0;
 const getPullRequestPages = (octokit, context, cursor) => __awaiter(void 0, void 0, void 0, function* () {
     const after = `, after: "${cursor}"`;
     const query = `{
@@ -244,6 +263,31 @@ const getPullRequests = (octokit, context) => __awaiter(void 0, void 0, void 0, 
     return pullrequests;
 });
 exports.getPullRequests = getPullRequests;
+const getPullRequest = (octokit, context, number) => __awaiter(void 0, void 0, void 0, function* () {
+    const query = `query ($owner: String!, $repo: String!, $number: Int!) { 
+    repository(owner:$owner name:$repo) {
+      pullRequest(number: $number) {
+        id
+        number
+        mergeable
+        potentialMergeCommit {
+          oid
+        }
+        labels(first: 100) {
+          edges {
+            node {
+              id
+              name
+            }
+          }
+        }
+      }
+    }
+  }`;
+    const repoPr = yield octokit.graphql(query, Object.assign(Object.assign({}, context.repo), { number }));
+    return repoPr.repository.pullRequest;
+});
+exports.getPullRequest = getPullRequest;
 const getLabels = (octokit, context, labelName) => __awaiter(void 0, void 0, void 0, function* () {
     const query = `{
     repository(owner: "${context.repo.owner}", name: "${context.repo.repo}") {
@@ -343,7 +387,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.run = void 0;
+exports.runOnAll = exports.runOnPullRequest = exports.run = void 0;
 const core = __importStar(__nccwpck_require__(2186));
 const github = __importStar(__nccwpck_require__(5438));
 const queries_1 = __nccwpck_require__(775);
@@ -363,14 +407,10 @@ function run() {
             core.debug(`detectMergeChanges=${detectMergeChanges}`);
             // Get the label to use
             const conflictLabel = util_1.findLabelByName(yield queries_1.getLabels(octokit, github.context, conflictLabelName), conflictLabelName);
-            core.startGroup('🔎 Gather Pull Request Data');
-            const pullRequests = yield pulls_1.gatherPullRequests(octokit, github.context, waitMs, maxRetries);
-            core.endGroup();
-            core.startGroup('🏷️ Updating labels');
-            for (const pullRequest of pullRequests) {
-                yield label_1.updatePullRequestConflictLabel(octokit, github.context, pullRequest, conflictLabel, detectMergeChanges);
+            if (github.context.eventName === 'pull_request') {
+                return yield runOnPullRequest(octokit, github.context, conflictLabel, waitMs, maxRetries, detectMergeChanges);
             }
-            core.endGroup();
+            yield runOnAll(octokit, github.context, conflictLabel, waitMs, maxRetries, detectMergeChanges);
         }
         catch (error) {
             core.setFailed(error.message);
@@ -378,6 +418,31 @@ function run() {
     });
 }
 exports.run = run;
+function runOnPullRequest(octokit, context, conflictLabel, waitMs, maxRetries, detectMergeChanges) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const prEvent = context.payload;
+        core.startGroup(`🔎 Gather data for Pull Request #${prEvent.number}`);
+        const pr = yield pulls_1.gatherPullRequest(octokit, context, prEvent, waitMs, maxRetries);
+        core.endGroup();
+        core.startGroup('🏷️ Updating labels');
+        yield label_1.updatePullRequestConflictLabel(octokit, context, pr, conflictLabel, detectMergeChanges);
+        core.endGroup();
+    });
+}
+exports.runOnPullRequest = runOnPullRequest;
+function runOnAll(octokit, context, conflictLabel, waitMs, maxRetries, detectMergeChanges) {
+    return __awaiter(this, void 0, void 0, function* () {
+        core.startGroup('🔎 Gather data for all Pull Requests');
+        const pullRequests = yield pulls_1.gatherPullRequests(octokit, context, waitMs, maxRetries);
+        core.endGroup();
+        core.startGroup('🏷️ Updating labels');
+        for (const pullRequest of pullRequests) {
+            yield label_1.updatePullRequestConflictLabel(octokit, context, pullRequest.node, conflictLabel, detectMergeChanges);
+        }
+        core.endGroup();
+    });
+}
+exports.runOnAll = runOnAll;
 
 
 /***/ }),
@@ -396,7 +461,7 @@ function getPullrequestsWithoutMergeStatus(pullrequests) {
 }
 exports.getPullrequestsWithoutMergeStatus = getPullrequestsWithoutMergeStatus;
 function isAlreadyLabeled(pullrequest, label) {
-    return (pullrequest.node.labels.edges.find((l) => {
+    return (pullrequest.labels.edges.find((l) => {
         return l.node.id === label.node.id;
     }) !== undefined);
 }
@@ -1764,7 +1829,7 @@ function _objectWithoutProperties(source, excluded) {
   return target;
 }
 
-const VERSION = "3.3.0";
+const VERSION = "3.3.1";
 
 class Octokit {
   constructor(options = {}) {
@@ -2473,7 +2538,7 @@ exports.withCustomRequest = withCustomRequest;
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 
-const VERSION = "2.13.2";
+const VERSION = "2.13.3";
 
 /**
  * Some “list” response that can be paginated have a different response structure

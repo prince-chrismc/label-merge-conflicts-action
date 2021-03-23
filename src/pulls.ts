@@ -1,24 +1,53 @@
 import * as core from '@actions/core'
 import {Context} from '@actions/github/lib/context'
 import {GitHub} from '@actions/github/lib/utils'
+import {PullRequestEvent} from '@octokit/webhooks-definitions/schema'
 
-import {IGithubPRNode} from './interfaces'
+import {IGitHubPRNode, IGitHubPullRequest} from './interfaces'
 import {wait} from './wait'
-import {getCommitChanges, getPullRequestChanges, getPullRequests} from './queries'
+import {getCommitChanges, getPullRequestChanges, getPullRequests, getPullRequest} from './queries'
 import {getPullrequestsWithoutMergeStatus} from './util'
 
-// fetch PRs up to $maxRetries times
-// multiple fetches are necessary because Github computes the 'mergeable' status asynchronously, on request,
-// which might not be available directly after the merge
+export async function gatherPullRequest(
+  octokit: InstanceType<typeof GitHub>,
+  context: Context,
+  prEvent: PullRequestEvent,
+  waitMs: number,
+  maxRetries: number
+): Promise<IGitHubPullRequest> {
+  let tries = 0
+  let pullRequest: IGitHubPullRequest
+  let uknownStatus: boolean = typeof prEvent.pull_request.mergeable !== 'boolean'
+
+  do {
+    tries++
+
+    if (uknownStatus) {
+      // on event trigger we still need to give it time to calc if it was unknown
+      core.info(`...waiting for mergeable info...`)
+      await wait(waitMs)
+    }
+
+    pullRequest = await getPullRequest(octokit, context, prEvent.number) // Always get it since the conversion is non-trivial
+    uknownStatus = pullRequest.mergeable === 'UNKNOWN'
+  } while (uknownStatus && maxRetries >= tries)
+
+  if (uknownStatus) {
+    throw new Error(`Could not determine mergeable status for: #${prEvent.number}`)
+  }
+
+  return pullRequest
+}
+
 export async function gatherPullRequests(
   octokit: InstanceType<typeof GitHub>,
   context: Context,
   waitMs: number,
   maxRetries: number
-): Promise<IGithubPRNode[]> {
+): Promise<IGitHubPRNode[]> {
   let tries = 0
-  let pullRequests: IGithubPRNode[] = []
-  let pullrequestsWithoutMergeStatus: IGithubPRNode[] = []
+  let pullRequests: IGitHubPRNode[] = []
+  let pullrequestsWithoutMergeStatus: IGitHubPRNode[] = []
 
   do {
     tries++
@@ -32,7 +61,7 @@ export async function gatherPullRequests(
     pullrequestsWithoutMergeStatus = getPullrequestsWithoutMergeStatus(pullRequests) // filter PRs with unknown mergeable status
   } while (pullrequestsWithoutMergeStatus.length > 0 && maxRetries >= tries)
 
-  // after $maxRetries we give up, probably Github had some issues
+  // after $maxRetries we give up, probably GitHub had some issues
   if (pullrequestsWithoutMergeStatus.length > 0) {
     // Only set failed so that we can proccess the rest of the pull requests the do have mergeable calculated
     core.setFailed(
@@ -50,20 +79,20 @@ export async function gatherPullRequests(
 export const checkPullRequestForMergeChanges = async (
   octokit: InstanceType<typeof GitHub>,
   context: Context,
-  pullRequest: IGithubPRNode
+  pullRequest: IGitHubPullRequest
 ): Promise<boolean> => {
-  const prChangedFiles = await getPullRequestChanges(octokit, context, pullRequest.node.number)
-  const mergeChangedFiles = await getCommitChanges(octokit, context, pullRequest.node.potentialMergeCommit.oid)
+  const prChangedFiles = await getPullRequestChanges(octokit, context, pullRequest.number)
+  const mergeChangedFiles = await getCommitChanges(octokit, context, pullRequest.potentialMergeCommit.oid)
 
   if (prChangedFiles.length !== mergeChangedFiles.length) {
-    core.info(`#${pullRequest.node.number} has a difference in the number of files`)
+    core.info(`#${pullRequest.number} has a difference in the number of files`)
     return true // I'd be shocked if it was not!
   }
 
   // TODO: There's an assumption the files list should always be ordered the same which needs to be verified.
   for (let i = 0; i < prChangedFiles.length; i++) {
     if (prChangedFiles[i].sha !== mergeChangedFiles[i].sha) {
-      core.info(`#${pullRequest.node.number} has a mismatching SHA's`)
+      core.info(`#${pullRequest.number} has a mismatching SHA's`)
       return true
     }
   }
