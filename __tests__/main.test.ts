@@ -17,7 +17,6 @@ import {
 import {checkPullRequestForMergeChanges, gatherPullRequests, gatherPullRequest} from '../src/pulls'
 import {updatePullRequestConflictLabel} from '../src/label'
 import {run} from '../src/run'
-import { PullRequestEvent } from '@octokit/webhooks-definitions/schema'
 
 test('throws invalid number', async () => {
   const input = parseInt('foo', 10)
@@ -204,7 +203,7 @@ describe('queries', () => {
         }
       },
       author_association: 'OWNER',
-      mergeable: null,
+      mergeable: null
     },
     repository: {
       id: 186853002,
@@ -597,7 +596,7 @@ describe('queries', () => {
         authorization: 'token justafaketoken'
       }
     })
-    .post('/graphql', /\"variables\":{\"owner\":\"some-owner\",\"repo\":\"some-repo\",\"number\":2}/)
+      .post('/graphql', /\"variables\":{\"owner\":\"some-owner\",\"repo\":\"some-repo\",\"number\":2}/)
       .reply(200, {
         data: {
           repository: {
@@ -653,10 +652,10 @@ describe('queries', () => {
     const pullRequest = await gatherPullRequest(octokit, github.context, mockPullRequestEvent as any, 25, 2)
     const end = new Date()
     var delta = Math.abs(end.getTime() - start.getTime())
-    
+
     expect(delta).toBeGreaterThan(45)
     expect(delta).toBeLessThan(75)
-    
+
     expect(pullRequest.id).toBe('MDExOlB1bGxSZXF1ZXN0NTk3NDgzNjg4')
     expect(pullRequest.number).toBe(mockPullRequestEvent.number)
     expect(pullRequest.mergeable).toBe('MERGEABLE')
@@ -669,7 +668,7 @@ describe('queries', () => {
         authorization: 'token justafaketoken'
       }
     })
-    .post('/graphql', /\"variables\":{\"owner\":\"some-owner\",\"repo\":\"some-repo\",\"number\":2}/)
+      .post('/graphql', /\"variables\":{\"owner\":\"some-owner\",\"repo\":\"some-repo\",\"number\":2}/)
       .times(3)
       .reply(200, {
         data: {
@@ -697,7 +696,7 @@ describe('queries', () => {
       })
 
     const octokit = github.getOctokit('justafaketoken')
-    const pullRequest =  gatherPullRequest(octokit, github.context, mockPullRequestEvent as any, 25, 2)
+    const pullRequest = gatherPullRequest(octokit, github.context, mockPullRequestEvent as any, 25, 2)
 
     await expect(pullRequest).rejects.toThrowError(/Could not determine mergeable status/)
   })
@@ -1395,6 +1394,8 @@ describe('queries', () => {
 
   describe('the whole sequence', () => {
     test('push event works', async () => {
+      github.context.eventName = 'push'
+
       const scope = nock('https://api.github.com', {
         reqheaders: {
           authorization: 'token justafaketoken'
@@ -1538,13 +1539,15 @@ describe('queries', () => {
       inputs['github_token'] = 'justafaketoken'
       // inputs['max_retries'] = '1'
       inputs['wait_ms'] = '25'
+
+      expect(github.context.eventName).toBe('push')
+
       await run()
 
       expect(mock).not.toBeCalled()
     })
 
     test('pull_request event works', async () => {
-      jest.setTimeout(500000000)
       github.context.eventName = 'pull_request'
       github.context.payload = mockPullRequestEvent as any
 

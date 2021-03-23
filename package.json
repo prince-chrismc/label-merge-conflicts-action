@@ -10,7 +10,7 @@
     "lint": "eslint --fix src/**/*.ts",
     "package": "ncc build --source-map --license licenses.txt",
     "test": "jest",
-    "all": "yarn format && yarn lint && yarn build && yarn package"
+    "all": "yarn format && yarn lint && yarn test && yarn build && yarn package"
   },
   "repository": {
     "type": "git",
