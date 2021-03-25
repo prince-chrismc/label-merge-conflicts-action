@@ -3,9 +3,9 @@ import {Context} from '@actions/github/lib/context'
 import {GitHub} from '@actions/github/lib/utils'
 import {PullRequestEvent} from '@octokit/webhooks-definitions/schema'
 
-import {IGitHubPRNode, IGitHubPullRequest} from './interfaces'
+import {IGitHubPRNode, IGitHubPullRequest, MergeStateStatus} from './interfaces'
 import {wait} from './wait'
-import {getCommitChanges, getPullRequestChanges, getPullRequests, getPullRequest} from './queries'
+import {getPullRequests, getPullRequest} from './queries'
 import {getPullrequestsWithoutMergeStatus} from './util'
 
 export async function gatherPullRequest(
@@ -29,7 +29,7 @@ export async function gatherPullRequest(
     }
 
     pullRequest = await getPullRequest(octokit, context, prEvent.number) // Always get it since the conversion is non-trivial
-    uknownStatus = pullRequest.mergeable === 'UNKNOWN'
+    uknownStatus = pullRequest.mergeStateStatus === MergeStateStatus.UNKNOWN
   } while (uknownStatus && maxRetries >= tries)
 
   if (uknownStatus) {
@@ -74,28 +74,4 @@ export async function gatherPullRequests(
   }
 
   return pullRequests
-}
-
-export const checkPullRequestForMergeChanges = async (
-  octokit: InstanceType<typeof GitHub>,
-  context: Context,
-  pullRequest: IGitHubPullRequest
-): Promise<boolean> => {
-  const prChangedFiles = await getPullRequestChanges(octokit, context, pullRequest.number)
-  const mergeChangedFiles = await getCommitChanges(octokit, context, pullRequest.potentialMergeCommit.oid)
-
-  if (prChangedFiles.length !== mergeChangedFiles.length) {
-    core.info(`#${pullRequest.number} has a difference in the number of files`)
-    return true // I'd be shocked if it was not!
-  }
-
-  // TODO: There's an assumption the files list should always be ordered the same which needs to be verified.
-  for (let i = 0; i < prChangedFiles.length; i++) {
-    if (prChangedFiles[i].sha !== mergeChangedFiles[i].sha) {
-      core.info(`#${pullRequest.number} has a mismatching SHA's`)
-      return true
-    }
-  }
-
-  return false
 }

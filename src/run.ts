@@ -53,7 +53,7 @@ export async function runOnPullRequest(
   core.endGroup()
 
   core.startGroup('🏷️ Updating labels')
-  await updatePullRequestConflictLabel(octokit, context, pr, conflictLabel, detectMergeChanges)
+  await updatePullRequestConflictLabel(octokit, pr, conflictLabel, detectMergeChanges)
   core.endGroup()
 }
 
@@ -71,7 +71,7 @@ export async function runOnAll(
 
   core.startGroup('🏷️ Updating labels')
   for (const pullRequest of pullRequests) {
-    await updatePullRequestConflictLabel(octokit, context, pullRequest.node, conflictLabel, detectMergeChanges)
+    await updatePullRequestConflictLabel(octokit, pullRequest.node, conflictLabel, detectMergeChanges)
   }
   core.endGroup()
 }

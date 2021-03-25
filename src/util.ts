@@ -1,8 +1,8 @@
-import {IGitHubPRNode, IGitHubPullRequest, IGitHubLabelNode, IGitHubRepoLabels} from './interfaces'
+import {IGitHubPRNode, IGitHubPullRequest, IGitHubLabelNode, IGitHubRepoLabels, MergeStateStatus} from './interfaces'
 
 export function getPullrequestsWithoutMergeStatus(pullrequests: IGitHubPRNode[]): IGitHubPRNode[] {
   return pullrequests.filter((pullrequest: IGitHubPRNode) => {
-    return pullrequest.node.mergeable === 'UNKNOWN'
+    return pullrequest.node.mergeStateStatus === MergeStateStatus.UNKNOWN
   })
 }
 

@@ -22,7 +22,7 @@ const getPullRequestPages = async (
           node {
             id
             number
-            mergeable
+            mergeStateStatus
             potentialMergeCommit {
               oid 
             }
@@ -44,7 +44,9 @@ const getPullRequestPages = async (
     }
   }`
 
-  return octokit.graphql(query)
+  return octokit.graphql(query, {
+    headers: { Accept: 'application/vnd.github.merge-info-preview+json' }
+  })
 }
 
 // fetch all PRs
@@ -77,7 +79,7 @@ export const getPullRequest = async (
       pullRequest(number: $number) {
         id
         number
-        mergeable
+        mergeStateStatus
         potentialMergeCommit {
           oid
         }
@@ -95,7 +97,8 @@ export const getPullRequest = async (
 
   const repoPr: IGitHubRepoPullRequest = await octokit.graphql(query, {
     ...context.repo,
-    number
+    number,
+    headers: { Accept: 'application/vnd.github.merge-info-preview+json' }
   })
 
   return repoPr.repository.pullRequest
@@ -160,45 +163,4 @@ export const removeLabelFromLabelable = async (
   }`
 
   return octokit.graphql(query)
-}
-
-export const getPullRequestChanges = async (
-  octokit: InstanceType<typeof GitHub>,
-  context: Context,
-  pullRequestnumber: number
-): Promise<IGitHubFileChange[]> => {
-  const head = await octokit.pulls.listFiles({
-    ...context.repo,
-    pull_number: pullRequestnumber, // eslint-disable-line camelcase
-    /**
-     * This is correct the different default values which on larger pull requests is an issue.
-     * There is no pagination support.
-     *
-     * https://docs.github.com/en/rest/reference/pulls#list-pull-requests-files
-     * > Responses include a maximum of 3000 files. The paginated response returns 30 files per page by default.
-     *
-     * https://docs.github.com/en/rest/reference/repos#get-a-commit
-     * > If there are more than 300 files in the commit diff, the response will include pagination link headers for the remaining files, up to a limit of 3000 files.
-     */
-    per_page: 300 // eslint-disable-line camelcase
-  })
-
-  return head.data
-}
-
-export const getCommitChanges = async (
-  octokit: InstanceType<typeof GitHub>,
-  context: Context,
-  sha: string
-): Promise<IGitHubFileChange[]> => {
-  const mergeCommit = await octokit.repos.getCommit({
-    ...context.repo,
-    ref: sha
-  })
-
-  if (typeof mergeCommit.data.files === 'undefined') {
-    throw new Error(`merge commit with an unknown diff!`)
-  }
-
-  return mergeCommit.data.files as IGitHubFileChange[]
 }

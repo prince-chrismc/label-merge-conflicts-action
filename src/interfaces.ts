@@ -13,10 +13,21 @@ export interface IGitHubRepoLabels {
   }
 }
 
+export enum MergeStateStatus {
+  BEHIND,
+  BLOCKED,
+  CLEAN,
+  DIRTY,
+  DRAFT,
+  HAS_HOOKS,
+  UNKNOWN,
+  UNSTABLE
+}
+
 export interface IGitHubPullRequest {
   id: string
   number: number
-  mergeable: string
+  mergeStateStatus: MergeStateStatus
   potentialMergeCommit: {
     oid: string
   }
