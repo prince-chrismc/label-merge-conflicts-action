@@ -16,8 +16,10 @@ export async function gatherPullRequest(
   maxRetries: number
 ): Promise<IGitHubPullRequest> {
   let tries = 0
-  let pullRequest: IGitHubPullRequest
-  let uknownStatus: boolean = typeof prEvent.pull_request.mergeable !== 'boolean'
+  // We query GitHub rightaway for merging state, as GitHub forces a compute of the mergeable state after a query
+  // See https://docs.github.com/en/rest/guides/getting-started-with-the-git-database-api#checking-mergeability-of-pull-requests
+  let pullRequest: IGitHubPullRequest = await getPullRequest(octokit, context, prEvent.number)
+  let uknownStatus: boolean = pullRequest.mergeStateStatus === MergeStateStatus.UNKNOWN
 
   do {
     tries++
@@ -28,7 +30,7 @@ export async function gatherPullRequest(
       await wait(waitMs)
     }
 
-    pullRequest = await getPullRequest(octokit, context, prEvent.number) // Always get it since the conversion is non-trivial
+    pullRequest = await getPullRequest(octokit, context, prEvent.number) // Fetch the updated PR
     uknownStatus = pullRequest.mergeStateStatus === MergeStateStatus.UNKNOWN
   } while (uknownStatus && maxRetries >= tries)
 

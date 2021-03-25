@@ -19,7 +19,7 @@ inputs:
     description: "miliseconds between retries"
     required: false
     default: "5000"
-  detect_merge_changes:
+  mergeable_only:
     description: "treat soft changes within the merge commits as conflicts and label accordingly"
     required: false
     default: "false"

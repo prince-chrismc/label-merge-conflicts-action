@@ -26,7 +26,7 @@ jobs:
         with:
           conflict_label_name: "has conflict"
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          detect_merge_changes: true
+          mergeable_only: true
 
   coverage:
     needs: [build, e2e]

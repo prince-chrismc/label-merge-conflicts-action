@@ -32,14 +32,14 @@ jobs:
   auto-label:
     runs-on: ubuntu-latest
     steps:
-      - uses: prince-chrismc/label-merge-conflicts-action@v1
+      - uses: prince-chrismc/label-merge-conflicts-action@v1 # Replace this with the latest version
         with:
           conflict_label_name: "has conflict"
           github_token: ${{ secrets.GITHUB_TOKEN }}
           # These are optional incase you need to adjust for the limitations described below
           max_retries: 5
           wait_ms: 15000
-          detect_merge_changes: false # or true to handle as conflicts
+          mergeable_only: false # or true to unlabel as soon as all the merge requirements are fulfilled
 ```
 
 ## Limitations
@@ -54,7 +54,16 @@ jobs:
 
 ## FAQ - What are _Merge Changes_?
 
-During a merge, no matter the [strategy](https://git-scm.com/docs/merge-strategies), there may inadvertently be changes which can have negative side effects. For example, it may result in code that is no longer syntactically correct or checksums to be out of date.
+By default, as soon as the conflicts are resolved, the action will remove the assigned label. However, you can do it after requirements, like CI checks
+and reviews in protected branches are succesful. For this to work correctly, you must replace the events:
+
+```yml
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+```
 
 ## FAQ - How do I fix _"Resource not accessible by integration"_?
 

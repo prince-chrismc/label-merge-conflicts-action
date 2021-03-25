@@ -24,13 +24,17 @@ export enum MergeStateStatus {
   UNSTABLE
 }
 
+export enum MergeableState {
+  CONFLICTING,
+  MERGEABLE,
+  UNKNOWN
+}
+
 export interface IGitHubPullRequest {
   id: string
   number: number
+  mergeable: MergeableState
   mergeStateStatus: MergeStateStatus
-  potentialMergeCommit: {
-    oid: string
-  }
   labels: {
     edges: IGitHubLabelNode[]
   }
@@ -58,9 +62,4 @@ export interface IGitHubRepoPullRequests {
       pageInfo: IGitHubPageInfo
     }
   }
-}
-
-export interface IGitHubFileChange {
-  sha: string
-  filename: string
 }

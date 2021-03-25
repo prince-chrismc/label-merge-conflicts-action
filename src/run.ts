@@ -20,8 +20,8 @@ export async function run(): Promise<void> {
     const waitMs = parseInt(core.getInput('wait_ms'), 10)
     core.debug(`maxRetries=${maxRetries}; waitMs=${waitMs}`)
 
-    const detectMergeChanges = core.getInput('detect_merge_changes') === 'true'
-    core.debug(`detectMergeChanges=${detectMergeChanges}`)
+    const mergeable_only = core.getInput('mergeable_only') === 'true'
+    core.debug(`mergeable_only=${mergeable_only}`)
 
     // Get the label to use
     const conflictLabel = findLabelByName(
@@ -30,10 +30,10 @@ export async function run(): Promise<void> {
     )
 
     if (github.context.eventName === 'pull_request') {
-      return await runOnPullRequest(octokit, github.context, conflictLabel, waitMs, maxRetries, detectMergeChanges)
+      return await runOnPullRequest(octokit, github.context, conflictLabel, waitMs, maxRetries, mergeable_only)
     }
 
-    await runOnAll(octokit, github.context, conflictLabel, waitMs, maxRetries, detectMergeChanges)
+    await runOnAll(octokit, github.context, conflictLabel, waitMs, maxRetries, mergeable_only)
   } catch (error) {
     core.setFailed(error.message)
   }
@@ -45,7 +45,7 @@ export async function runOnPullRequest(
   conflictLabel: IGitHubLabelNode,
   waitMs: number,
   maxRetries: number,
-  detectMergeChanges: boolean
+  mergeable_only: boolean
 ): Promise<void> {
   const prEvent = context.payload as PullRequestEvent
   core.startGroup(`🔎 Gather data for Pull Request #${prEvent.number}`)
@@ -53,7 +53,7 @@ export async function runOnPullRequest(
   core.endGroup()
 
   core.startGroup('🏷️ Updating labels')
-  await updatePullRequestConflictLabel(octokit, pr, conflictLabel, detectMergeChanges)
+  await updatePullRequestConflictLabel(octokit, pr, conflictLabel, mergeable_only)
   core.endGroup()
 }
 
@@ -63,7 +63,7 @@ export async function runOnAll(
   conflictLabel: IGitHubLabelNode,
   waitMs: number,
   maxRetries: number,
-  detectMergeChanges: boolean
+  mergeable_only: boolean
 ): Promise<void> {
   core.startGroup('🔎 Gather data for all Pull Requests')
   const pullRequests = await gatherPullRequests(octokit, context, waitMs, maxRetries)
@@ -71,7 +71,7 @@ export async function runOnAll(
 
   core.startGroup('🏷️ Updating labels')
   for (const pullRequest of pullRequests) {
-    await updatePullRequestConflictLabel(octokit, pullRequest.node, conflictLabel, detectMergeChanges)
+    await updatePullRequestConflictLabel(octokit, pullRequest.node, conflictLabel, mergeable_only)
   }
   core.endGroup()
 }

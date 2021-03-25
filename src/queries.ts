@@ -4,7 +4,6 @@ import {
   IGitHubPRNode,
   IGitHubRepoLabels,
   IGitHubRepoPullRequests,
-  IGitHubFileChange,
   IGitHubRepoPullRequest,
   IGitHubPullRequest
 } from './interfaces'
@@ -22,10 +21,8 @@ const getPullRequestPages = async (
           node {
             id
             number
+            mergeable
             mergeStateStatus
-            potentialMergeCommit {
-              oid 
-            }
             labels(first: 100) {
               edges {
                 node {
@@ -79,10 +76,8 @@ export const getPullRequest = async (
       pullRequest(number: $number) {
         id
         number
+        mergeable
         mergeStateStatus
-        potentialMergeCommit {
-          oid
-        }
         labels(first: 100) {
           edges {
             node {
