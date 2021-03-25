@@ -35,10 +35,20 @@ export async function updatePullRequestConflictLabel(
   const labelable: Labelable = {labelId: conflictLabel.node.id, labelableId: pullRequest.id}
 
   if (pullRequest.mergeStateStatus) {
+    if (
+      pullRequest.mergeable === MergeableState.MERGEABLE &&
+      pullRequest.mergeStateStatus === MergeStateStatus.CLEAN &&
+      hasLabel
+    ) {
+      core.info(`Unmarking #${pullRequest.number}...`)
+      await removeLabelFromLabelable(octokit, labelable)
+      return
+    }
+
     if (pullRequest.mergeStateStatus === MergeStateStatus.DIRTY) {
       await applyLabelable(octokit, labelable, hasLabel, pullRequest.number)
     } else {
-      if (mergeable_only && pullRequest.mergeable !== MergeableState.MERGEABLE) {
+      if (mergeable_only && pullRequest.mergeable !== MergeableState.MERGEABLE && !hasLabel) {
         await applyLabelable(octokit, labelable, hasLabel, pullRequest.number)
       } else if (hasLabel) {
         core.info(`Unmarking #${pullRequest.number}...`)
