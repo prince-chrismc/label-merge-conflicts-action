@@ -15,8 +15,8 @@ const getPullRequestPages = async (
   cursor?: string
 ): Promise<IGitHubRepoPullRequests> => {
   const after = `, after: "${cursor}"`
-  const query = `{
-    repository(owner: "${context.repo.owner}", name: "${context.repo.repo}") {
+  const query = `query ($owner: String!, $repo: String!) {
+    repository(owner:$owner name:$repo) {
       pullRequests(first: 100, states: OPEN ${cursor ? after : ''}) {
         edges {
           node {
@@ -44,7 +44,9 @@ const getPullRequestPages = async (
     }
   }`
 
-  return octokit.graphql(query)
+  return octokit.graphql(query, {
+    ...context.repo
+  })
 }
 
 // fetch all PRs
@@ -106,9 +108,9 @@ export const getLabels = async (
   context: Context,
   labelName: string
 ): Promise<IGitHubRepoLabels> => {
-  const query = `{
-    repository(owner: "${context.repo.owner}", name: "${context.repo.repo}") {
-      labels(first: 100, query: "${labelName}") {
+  const query = `query ($owner: String!, $repo: String!, labelName: String!) { 
+    repository(owner:$owner name:$repo) {
+      labels(first: 100, query: $labelName) {
         edges {
           node {
             id
@@ -119,7 +121,10 @@ export const getLabels = async (
     }
   }`
 
-  return octokit.graphql(query)
+  return octokit.graphql(query, {
+    ...context.repo,
+    labelName
+  })
 }
 
 export const addLabelToLabelable = async (
