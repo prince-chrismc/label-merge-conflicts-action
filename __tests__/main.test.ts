@@ -711,7 +711,7 @@ describe('queries', () => {
         })
           .post(
             '/graphql',
-            /addLabelsToLabelable.*{labelIds: \[.*"MDU6TGFiZWwyNzYwMjE1ODI0.*\], labelableId: .*"MDExOlB1bGxSZXF1ZXN0NTc4ODgyNDUw.*"}/
+            /addLabelsToLabelable.*variables.*MDU6TGFiZWwyNzYwMjE1ODI0.*MDExOlB1bGxSZXF1ZXN0NTc4ODgyNDUw.*/
           )
           .reply(200, {data: {}})
 
@@ -755,7 +755,7 @@ describe('queries', () => {
         })
           .post(
             '/graphql',
-            /removeLabelsFromLabelable.*{labelIds: \[.*"MDU6TGFiZWwyNzYwMjE1ODI0.*\], labelableId: .*"MDExOlB1bGxSZXF1ZXN0NTc4ODgyNDUw.*"}/
+            /removeLabelsFromLabelable.*variables.*MDU6TGFiZWwyNzYwMjE1ODI0.*MDExOlB1bGxSZXF1ZXN0NTc4ODgyNDUw.*/
           )
           .reply(200, {data: {}})
 
@@ -1114,7 +1114,7 @@ describe('queries', () => {
         })
           .post(
             '/graphql',
-            /addLabelsToLabelable.*{labelIds: \[.*"MDU6TGFiZWwyNzYwMjE1ODI0.*\], labelableId: .*"MDExOlB1bGxSZXF1ZXN0NTc4ODgyNDUw.*"}/
+            /addLabelsToLabelable.*variables.*MDU6TGFiZWwyNzYwMjE1ODI0.*MDExOlB1bGxSZXF1ZXN0NTc4ODgyNDUw.*/
           )
           .reply(200, {data: {clientMutationId: 'auniqueid'}})
 
@@ -1133,7 +1133,7 @@ describe('queries', () => {
         })
           .post(
             '/graphql',
-            /addLabelsToLabelable.*{labelIds: \[.*"MDU6TGFiZWwyNzYwMjE1ODI0.*\], labelableId: .*"MDExOlB1bGxSZXF1ZXN0NTc4ODgyNDUw.*"}/
+            /addLabelsToLabelable.*variables.*MDU6TGFiZWwyNzYwMjE1ODI0.*MDExOlB1bGxSZXF1ZXN0NTc4ODgyNDUw.*/
           )
           .reply(400, {
             message: 'Body should be a JSON object',
@@ -1167,7 +1167,7 @@ describe('queries', () => {
         })
           .post(
             '/graphql',
-            /removeLabelsFromLabelable.*{labelIds: \[.*"MDU6TGFiZWwyNzYwMjE1ODI0.*\], labelableId: .*"MDExOlB1bGxSZXF1ZXN0NTc4ODgyNDUw.*"}/
+            /removeLabelsFromLabelable.*variables.*MDU6TGFiZWwyNzYwMjE1ODI0.*MDExOlB1bGxSZXF1ZXN0NTc4ODgyNDUw.*/
           )
           .reply(200, {data: {}})
 
@@ -1278,7 +1278,7 @@ describe('queries', () => {
           })
           .post(
             '/graphql',
-            /removeLabelsFromLabelable.*{labelIds: \[.*"MDU6TGFiZWwyNzYwMjE1ODI0.*\], labelableId: .*"MDExOlB1bGxSZXF1ZXN0NTc4ODgyNDUw.*"}/
+            /removeLabelsFromLabelable.*variables.*MDU6TGFiZWwyNzYwMjE1ODI0.*MDExOlB1bGxSZXF1ZXN0NTc4ODgyNDUw.*/
           )
           .reply(200, {data: {}})
 
@@ -1370,7 +1370,7 @@ describe('queries', () => {
           })
           .post(
             '/graphql',
-            /addLabelsToLabelable.*{labelIds: \[.*"MDU6TGFiZWwyNzYwMjE1ODI0.*\], labelableId: .*"MDExOlB1bGxSZXF1ZXN0NTc4ODgyNDUw.*"}/
+            /addLabelsToLabelable.*variables.*MDU6TGFiZWwyNzYwMjE1ODI0.*MDExOlB1bGxSZXF1ZXN0NDQzNTg3NjI1.*/
           )
           .reply(200, {data: {}})
 
@@ -1529,7 +1529,7 @@ describe('queries', () => {
         })
         .post(
           '/graphql',
-          /addLabelsToLabelable.*{labelIds: \[.*"MDU6TGFiZWwyNzYwMjE1ODI0.*\], labelableId: .*"MDExOlB1bGxSZXF1ZXN0NDQzNTg3NjI1.*"}/
+          /addLabelsToLabelable.*variables.*MDU6TGFiZWwyNzYwMjE1ODI0.*MDExOlB1bGxSZXF1ZXN0NDQzNTg3NjI1.*/
         )
         .reply(200, {data: {}})
 
@@ -1612,7 +1612,7 @@ describe('queries', () => {
         })
         .post(
           '/graphql',
-          /addLabelsToLabelable.*{labelIds: \[.*"MDU6TGFiZWwyNzYwMjE1ODI0.*\], labelableId: .*"MDExOlB1bGxSZXF1ZXN0NDQzNTg3NjI1.*"}/
+          /addLabelsToLabelable.*variables.*MDU6TGFiZWwyNzYwMjE1ODI0.*MDExOlB1bGxSZXF1ZXN0NDQzNTg3NjI1.*/
         )
         .reply(200, {data: {}})
 
