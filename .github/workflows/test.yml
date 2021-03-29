@@ -25,7 +25,7 @@ jobs:
       - uses: ./
         with:
           conflict_label_name: "has conflict"
-          github_token: ${{ secrets.GITHUB_TOKEN }}
+          github_token: ${{ secrets.REPO_PAT }}
           detect_merge_changes: true
 
   coverage:
