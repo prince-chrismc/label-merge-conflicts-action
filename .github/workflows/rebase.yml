@@ -11,7 +11,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.REPO_PAT }}
           fetch-depth: 0 # otherwise, you will fail to push refs to dest repo
       - uses: cirrus-actions/rebase@1.4
         env:
