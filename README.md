@@ -55,6 +55,11 @@ jobs:
 
 During a merge, no matter the [strategy](https://git-scm.com/docs/merge-strategies), there may inadvertently be changes which can have negative side effects. For example, it may result in code that is no longer syntactically correct or checksums to be out of date.
 
+
+main | bug/fix-42 | merge 'bug/fix-42' in main
+--|--|--
+<code>Testing</code> | lhjgky | ygky
+
 ![merge changes](https://raw.githubusercontent.com/prince-chrismc/label-merge-conflicts-action/better-explain-merge-changes/.github/merge-change.svg)
 
 ## FAQ - How do I fix _"Resource not accessible by integration"_?
