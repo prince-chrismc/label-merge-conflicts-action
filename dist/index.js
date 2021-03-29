@@ -218,10 +218,9 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.getCommitChanges = exports.getPullRequestChanges = exports.removeLabelFromLabelable = exports.addLabelToLabelable = exports.getLabels = exports.getPullRequest = exports.getPullRequests = void 0;
 const getPullRequestPages = (octokit, context, cursor) => __awaiter(void 0, void 0, void 0, function* () {
-    const after = `, after: "${cursor}"`;
-    const query = `{
-    repository(owner: "${context.repo.owner}", name: "${context.repo.repo}") {
-      pullRequests(first: 100, states: OPEN ${cursor ? after : ''}) {
+    const query = `query ($owner: String!, $repo: String!, $after: String) {
+    repository(owner:$owner name:$repo) {
+      pullRequests(first: 100, states: OPEN, after: $after) {
         edges {
           node {
             id
@@ -247,7 +246,7 @@ const getPullRequestPages = (octokit, context, cursor) => __awaiter(void 0, void
       }
     }
   }`;
-    return octokit.graphql(query);
+    return octokit.graphql(query, Object.assign(Object.assign({}, context.repo), { after: cursor }));
 });
 // fetch all PRs
 const getPullRequests = (octokit, context) => __awaiter(void 0, void 0, void 0, function* () {
@@ -265,7 +264,7 @@ const getPullRequests = (octokit, context) => __awaiter(void 0, void 0, void 0, 
 exports.getPullRequests = getPullRequests;
 const getPullRequest = (octokit, context, number) => __awaiter(void 0, void 0, void 0, function* () {
     const query = `query ($owner: String!, $repo: String!, $number: Int!) { 
-    repository(owner:$owner name:$repo) {
+    repository(owner: $owner name: $repo) {
       pullRequest(number: $number) {
         id
         number
@@ -289,9 +288,9 @@ const getPullRequest = (octokit, context, number) => __awaiter(void 0, void 0, v
 });
 exports.getPullRequest = getPullRequest;
 const getLabels = (octokit, context, labelName) => __awaiter(void 0, void 0, void 0, function* () {
-    const query = `{
-    repository(owner: "${context.repo.owner}", name: "${context.repo.repo}") {
-      labels(first: 100, query: "${labelName}") {
+    const query = `query ($owner: String!, $repo: String!, $labelName: String!) { 
+    repository(owner: $owner name: $repo) {
+      labels(first: 10, query: $labelName) {
         edges {
           node {
             id
@@ -301,27 +300,25 @@ const getLabels = (octokit, context, labelName) => __awaiter(void 0, void 0, voi
       }
     }
   }`;
-    return octokit.graphql(query);
+    return octokit.graphql(query, Object.assign(Object.assign({}, context.repo), { labelName }));
 });
 exports.getLabels = getLabels;
 const addLabelToLabelable = (octokit, { labelId, labelableId }) => __awaiter(void 0, void 0, void 0, function* () {
-    const query = `
-  mutation {
-    addLabelsToLabelable(input: {labelIds: ["${labelId}"], labelableId: "${labelableId}"}) {
+    const query = `mutation ($label: String!, $pullRequest: String!) {
+    addLabelsToLabelable(input: {labelIds: [$label], labelableId: $pullRequest}) {
       clientMutationId
     }
   }`;
-    return octokit.graphql(query);
+    return octokit.graphql(query, { label: labelId, pullRequest: labelableId });
 });
 exports.addLabelToLabelable = addLabelToLabelable;
 const removeLabelFromLabelable = (octokit, { labelId, labelableId }) => __awaiter(void 0, void 0, void 0, function* () {
-    const query = `
-  mutation {
-    removeLabelsFromLabelable(input: {labelIds: ["${labelId}"], labelableId: "${labelableId}"}) {
+    const query = `mutation ($label: String!, $pullRequest: String!) {
+    removeLabelsFromLabelable(input: {labelIds: [$label], labelableId: $pullRequest}) {
       clientMutationId
     }
   }`;
-    return octokit.graphql(query);
+    return octokit.graphql(query, { label: labelId, pullRequest: labelableId });
 });
 exports.removeLabelFromLabelable = removeLabelFromLabelable;
 const getPullRequestChanges = (octokit, context, pullRequestnumber) => __awaiter(void 0, void 0, void 0, function* () {
