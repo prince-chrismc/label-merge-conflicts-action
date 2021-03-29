@@ -14,7 +14,7 @@ const getPullRequestPages = async (
   context: Context,
   cursor?: string
 ): Promise<IGitHubRepoPullRequests> => {
-  const query = `query ($owner: String!, $repo: String!, $after:String) {
+  const query = `query ($owner: String!, $repo: String!, $after: String) {
     repository(owner:$owner name:$repo) {
       pullRequests(first: 100, states: OPEN, after: $after) {
         edges {
@@ -43,12 +43,10 @@ const getPullRequestPages = async (
     }
   }`
 
-  let variables: any = {...context.repo}
-  if (cursor) {
-    variables = {...variables, after: cursor}
-  }
-
-  return octokit.graphql(query, variables)
+  return octokit.graphql(query, {
+    ...context.repo,
+    after: cursor
+  })
 }
 
 // fetch all PRs
@@ -77,7 +75,7 @@ export const getPullRequest = async (
   number: number
 ): Promise<IGitHubPullRequest> => {
   const query = `query ($owner: String!, $repo: String!, $number: Int!) { 
-    repository(owner:$owner name:$repo) {
+    repository(owner: $owner name: $repo) {
       pullRequest(number: $number) {
         id
         number
@@ -111,7 +109,7 @@ export const getLabels = async (
   labelName: string
 ): Promise<IGitHubRepoLabels> => {
   const query = `query ($owner: String!, $repo: String!, labelName: String!) { 
-    repository(owner:$owner name:$repo) {
+    repository(owner: $owner name: $repo) {
       labels(first: 100, query: $labelName) {
         edges {
           node {
@@ -139,7 +137,7 @@ export const addLabelToLabelable = async (
     labelableId: string
   }
 ) => {
-  const query = `mutation ($label: ID!, $pullRequest: ID!) {
+  const query = `mutation ($label: String!, $pullRequest: String!) {
     addLabelsToLabelable(input: {labelIds: [$label], labelableId: $pullRequest}) {
       clientMutationId
     }
@@ -158,7 +156,7 @@ export const removeLabelFromLabelable = async (
     labelableId: string
   }
 ) => {
-  const query = `mutation ($label: ID!, $pullRequest: ID!) {
+  const query = `mutation ($label: String!, $pullRequest: String!) {
     removeLabelsFromLabelable(input: {labelIds: [$label], labelableId: $pullRequest}) {
       clientMutationId
     }
