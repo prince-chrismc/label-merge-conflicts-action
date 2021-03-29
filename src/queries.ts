@@ -14,10 +14,9 @@ const getPullRequestPages = async (
   context: Context,
   cursor?: string
 ): Promise<IGitHubRepoPullRequests> => {
-  const after = `, after: "${cursor}"`
-  const query = `query ($owner: String!, $repo: String!) {
+  const query = `query ($owner: String!, $repo: String!, $after:String) {
     repository(owner:$owner name:$repo) {
-      pullRequests(first: 100, states: OPEN ${cursor ? after : ''}) {
+      pullRequests(first: 100, states: OPEN, after: $after) {
         edges {
           node {
             id
@@ -45,7 +44,8 @@ const getPullRequestPages = async (
   }`
 
   return octokit.graphql(query, {
-    ...context.repo
+    ...context.repo,
+    after: cursor
   })
 }
 
