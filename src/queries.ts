@@ -43,10 +43,12 @@ const getPullRequestPages = async (
     }
   }`
 
-  return octokit.graphql(query, {
-    ...context.repo,
-    after: cursor
-  })
+  let variables: any = {...context.repo}
+  if (cursor) {
+    variables = {...variables, after: cursor}
+  }
+
+  return octokit.graphql(query, variables)
 }
 
 // fetch all PRs

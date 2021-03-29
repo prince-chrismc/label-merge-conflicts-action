@@ -246,7 +246,11 @@ const getPullRequestPages = (octokit, context, cursor) => __awaiter(void 0, void
       }
     }
   }`;
-    return octokit.graphql(query, Object.assign(Object.assign({}, context.repo), { after: cursor }));
+    let variables = Object.assign({}, context.repo);
+    if (cursor) {
+        variables = Object.assign(Object.assign({}, variables), { after: cursor });
+    }
+    return octokit.graphql(query, variables);
 });
 // fetch all PRs
 const getPullRequests = (octokit, context) => __awaiter(void 0, void 0, void 0, function* () {
