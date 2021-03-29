@@ -288,9 +288,9 @@ const getPullRequest = (octokit, context, number) => __awaiter(void 0, void 0, v
 });
 exports.getPullRequest = getPullRequest;
 const getLabels = (octokit, context, labelName) => __awaiter(void 0, void 0, void 0, function* () {
-    const query = `query ($owner: String!, $repo: String!, labelName: String!) { 
+    const query = `query ($owner: String!, $repo: String!, $labelName: String!) { 
     repository(owner: $owner name: $repo) {
-      labels(first: 100, query: $labelName) {
+      labels(first: 10, query: $labelName) {
         edges {
           node {
             id

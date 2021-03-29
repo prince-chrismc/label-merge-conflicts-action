@@ -108,9 +108,9 @@ export const getLabels = async (
   context: Context,
   labelName: string
 ): Promise<IGitHubRepoLabels> => {
-  const query = `query ($owner: String!, $repo: String!, labelName: String!) { 
+  const query = `query ($owner: String!, $repo: String!, $labelName: String!) { 
     repository(owner: $owner name: $repo) {
-      labels(first: 100, query: $labelName) {
+      labels(first: 10, query: $labelName) {
         edges {
           node {
             id
