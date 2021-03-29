@@ -55,6 +55,9 @@ jobs:
 
 During a merge, no matter the [strategy](https://git-scm.com/docs/merge-strategies), there may inadvertently be changes which can have negative side effects. For example, it may result in code that is no longer syntactically correct or checksums to be out of date.
 
+<div>
+<div style="width:50%; display:flex;">
+
 ```cpp
 void some_function() {
    my_struct* obj = new my_struct();
@@ -62,6 +65,22 @@ void some_function() {
    return; // Oops! forgot to free memory
 }
 ```
+
+</div>
+
+<div style="width:50%; display:flex;">
+
+```diff
+void some_function() {
+   my_struct* obj = new my_struct();
+   // do stuff...
+-   return; // Oops! forgot to free memory
++   free(obj);
+}
+```
+
+</div>
+</div>
 
 main | bug/fix-42 | merge 'bug/fix-42' in main
 --|--|--
