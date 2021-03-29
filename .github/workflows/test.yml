@@ -21,6 +21,7 @@ jobs:
         with:
           author_name: github-actions[bot]
           author_email: github-actions[bot]@users.noreply.github.com
+          message: 'auto commit: linting and/or packing changes'
           add: '*'
 
   e2e: # make sure the action works on a clean machine without building
