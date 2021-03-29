@@ -55,8 +55,6 @@ jobs:
 
 During a merge, no matter the [strategy](https://git-scm.com/docs/merge-strategies), there may inadvertently be changes which can have negative side effects. For example, it may result in code that is no longer syntactically correct or checksums to be out of date.
 
-<div>
-<div style="width:50%; display:flex;">
 
 ```cpp
 void some_function() {
@@ -66,9 +64,25 @@ void some_function() {
 }
 ```
 
-</div>
+<table>
+  <tr>
+    <th>main</th>
+    <th>bug/fix-42</th>
+  </tr>
+  <tr>
+    <td>
 
-<div style="width:50%; display:flex;">
+```diff
+void some_function() {
+-   my_struct* obj = new my_struct();
++   std::unique_ptr<my_struct> obj = std::make_unique<my_struct>();
+   // do stuff...
+   return;
+}
+```
+
+  </td>
+    <td>
 
 ```diff
 void some_function() {
@@ -79,8 +93,9 @@ void some_function() {
 }
 ```
 
-</div>
-</div>
+  </td>
+  </tr>
+</table>
 
 main | bug/fix-42 | merge 'bug/fix-42' in main
 --|--|--
