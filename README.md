@@ -53,10 +53,18 @@ jobs:
 
 ## FAQ - What are _Merge Changes_?
 
-During a merge, no matter the [strategy](https://git-scm.com/docs/merge-strategies), there may inadvertently be changes which can have negative side effects. For example, it may result in code that is no longer syntactically correct or checksums to be out of date.
+When [merging a pull request](https://docs.github.com/en/github/collaborating-with-issues-and-pull-requests/about-pull-request-merges), no matter the
+[strategy](https://git-scm.com/docs/merge-strategies), there may _inadvertently be changes_ which can have negative side effects. For example...
+
+> I was working on an express app with a friend and [...] I ran `git pull`. There were no merge conflicts, but _git added duplicate functions_ to a file after merge.
+> I spent an hour trying to figure our what the problem was before realizing that **git had made a mistake** while merging. [ref](https://news.ycombinator.com/item?id=9871042)
 
 ## FAQ - How do I fix _"Resource not accessible by integration"_?
 
 > TL;DR use a [Personal Access Token (PAT)](https://docs.github.com/en/github/authenticating-to-github/creating-a-personal-access-token) instead **and** use the ([potentially dangerous](https://securitylab.github.com/research/github-actions-preventing-pwn-requests/)) event `pull_request_target`
 
-It boils down to the GitHub authorization/permissions implementation. The permission given in an Action's run is based on the [Event type](https://docs.github.com/en/actions/reference/events-that-trigger-workflows), for Pull Requests its the head branch from which it originates from. If a user without read access opens a Pull Request from their fork then it will not be granted adequate permissions to set the labels. See [actions/labeler#12](https://github.com/actions/labeler/issues/12), [actions/first-interaction#10](https://github.com/actions/first-interaction/issues/10), and [Actions are severely limited](https://github.community/t/github-actions-are-severely-limited-on-prs/18179#M9249) for more information.
+It boils down to the GitHub authorization/permissions implementation. The permission given in an Action's run is based on the
+[Event type](https://docs.github.com/en/actions/reference/events-that-trigger-workflows), for Pull Requests its the head branch from which it originates from.
+If a user without read access opens a Pull Request from their fork then it will not be granted adequate permissions to set the labels.
+See [actions/labeler#12](https://github.com/actions/labeler/issues/12), [actions/first-interaction#10](https://github.com/actions/first-interaction/issues/10),
+and [Actions are severely limited](https://github.community/t/github-actions-are-severely-limited-on-prs/18179#M9249) for more information.
