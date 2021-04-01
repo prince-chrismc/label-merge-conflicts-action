@@ -25,7 +25,6 @@ on:
   push:
     branches: [master]
   pull_request:
-    types: [opened, synchronize, reopened]
     branches: [master]
 
 jobs:
@@ -58,6 +57,6 @@ During a merge, no matter the [strategy](https://git-scm.com/docs/merge-strategi
 
 ## FAQ - How do I fix _"Resource not accessible by integration"_?
 
-> TL;DR use a [Personal Access Token (PAT)](https://docs.github.com/en/github/authenticating-to-github/creating-a-personal-access-token) instead
+> TL;DR use a [Personal Access Token (PAT)](https://docs.github.com/en/github/authenticating-to-github/creating-a-personal-access-token) instead **and** use the ([potentially dangerous](https://securitylab.github.com/research/github-actions-preventing-pwn-requests/)) event `pull_request_target`
 
 It boils down to the GitHub authorization/permissions implementation. The permission given in an Action's run is based on the [Event type](https://docs.github.com/en/actions/reference/events-that-trigger-workflows), for Pull Requests its the head branch from which it originates from. If a user without read access opens a Pull Request from their fork then it will not be granted adequate permissions to set the labels. See [actions/labeler#12](https://github.com/actions/labeler/issues/12), [actions/first-interaction#10](https://github.com/actions/first-interaction/issues/10), and [Actions are severely limited](https://github.community/t/github-actions-are-severely-limited-on-prs/18179#M9249) for more information.
