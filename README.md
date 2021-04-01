@@ -54,18 +54,10 @@ jobs:
 ## FAQ - What are _Merge Changes_?
 
 When [merging a pull request](https://docs.github.com/en/github/collaborating-with-issues-and-pull-requests/about-pull-request-merges), no matter the
-[strategy](https://git-scm.com/docs/merge-strategies), there may _inadvertently be changes_ which can have negative side effects.
+[strategy](https://git-scm.com/docs/merge-strategies), there may _inadvertently be changes_ which can have negative side effects. For example...
 
-For example, it may result situations like...
-
-> I was working on an express app with a friend and [...] I ran `git pull`. There were no merge conflicts, but _git added duplicate functions_ to a
-> file after merge. I spent an hour trying to figure our what the problem was before realizing that **git had made a mistake** while merging.
-> [ref](https://news.ycombinator.com/item?id=9871042)
-
-...or...
-
-> I prefer not to merge it since last time the automatic merge introduced a bunch of bugs. And the changes that are on master, well, I already have them somehow.
-> [ref](https://www.reddit.com/r/git/comments/5bssjv/automatic_merge_mistakes/?utm_source=share&utm_medium=web2x&context=3)
+> I was working on an express app with a friend and [...] I ran `git pull`. There were no merge conflicts, but _git added duplicate functions_ to a file after merge.
+> I spent an hour trying to figure our what the problem was before realizing that **git had made a mistake** while merging. [ref](https://news.ycombinator.com/item?id=9871042)
 
 ## FAQ - How do I fix _"Resource not accessible by integration"_?
 
