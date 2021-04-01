@@ -58,8 +58,8 @@ When [merging a pull request](https://docs.github.com/en/github/collaborating-wi
 
 For example, it may result situations like...
 
-> I was working on an express app with a friend and git auto merged a file after I ran `git pull`. There were no merge conflicts, but git added duplicate functions to a
-> file after merge. I spent an hour trying to figure our what the problem was before realizing that git had made a mistake while merging.
+> I was working on an express app with a friend and [...] I ran `git pull`. There were no merge conflicts, but _git added duplicate functions_ to a
+> file after merge. I spent an hour trying to figure our what the problem was before realizing that **git had made a mistake** while merging.
 > [ref](https://news.ycombinator.com/item?id=9871042)
 
 ...or...
