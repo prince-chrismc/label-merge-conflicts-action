@@ -1,0 +1,10 @@
+on:
+  release:
+    types: [published]
+jobs:
+  tag-major:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: Actions-R-Us/actions-tagger@latest
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
