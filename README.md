@@ -27,6 +27,11 @@ on:
   pull_request:
     branches: [master]
 
+# Optional: minimum permission required.
+permissions:
+  issues: write # Required to add labels
+  pull-requests: write # Required to add labels
+
 jobs:
   auto-label:
     runs-on: ubuntu-latest
@@ -61,9 +66,10 @@ When [merging a pull request](https://docs.github.com/en/github/collaborating-wi
 
 ## FAQ - How do I fix _"Resource not accessible by integration"_?
 
-> TL;DR use a [Personal Access Token (PAT)](https://docs.github.com/en/github/authenticating-to-github/creating-a-personal-access-token) instead **and** use the ([potentially dangerous](https://securitylab.github.com/research/github-actions-preventing-pwn-requests/)) event `pull_request_target`
+> TL;DR use a [Personal Access Token (PAT)](https://docs.github.com/en/github/authenticating-to-github/creating-a-personal-access-token) instead **and** use the
+ ([potentially dangerous](https://securitylab.github.com/research/github-actions-preventing-pwn-requests/)) event `pull_request_target`
 
-It boils down to the GitHub authorization/permissions implementation. The permission given in an Action's run is based on the
+It boils down to the GitHub authorization/permissions implementation. The permission given in an Action are based on [these options](https://github.blog/changelog/2021-04-20-github-actions-control-permissions-for-github_token/)
 [Event type](https://docs.github.com/en/actions/reference/events-that-trigger-workflows), for Pull Requests its the head branch from which it originates from.
 If a user without read access opens a Pull Request from their fork then it will not be granted adequate permissions to set the labels.
 See [actions/labeler#12](https://github.com/actions/labeler/issues/12), [actions/first-interaction#10](https://github.com/actions/first-interaction/issues/10),
