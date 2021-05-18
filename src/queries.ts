@@ -170,7 +170,7 @@ export const getPullRequestChanges = async (
   context: Context,
   pullRequestnumber: number
 ): Promise<IGitHubFileChange[]> => {
-  const head = await octokit.pulls.listFiles({
+  const head = await octokit.rest.pulls.listFiles({
     ...context.repo,
     pull_number: pullRequestnumber, // eslint-disable-line camelcase
     /**
@@ -194,7 +194,7 @@ export const getCommitChanges = async (
   context: Context,
   sha: string
 ): Promise<IGitHubFileChange[]> => {
-  const mergeCommit = await octokit.repos.getCommit({
+  const mergeCommit = await octokit.rest.repos.getCommit({
     ...context.repo,
     ref: sha
   })
