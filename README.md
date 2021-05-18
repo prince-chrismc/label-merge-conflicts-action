@@ -27,10 +27,9 @@ on:
   pull_request:
     branches: [master]
 
-# Optional: minimum permission required.
-permissions:
-  issues: write # Required to add labels
-  pull-requests: write # Required to add labels
+permissions: # Optional: minimum permission required to add labels
+  issues: write
+  pull-requests: write
 
 jobs:
   auto-label:
@@ -61,16 +60,13 @@ jobs:
 When [merging a pull request](https://docs.github.com/en/github/collaborating-with-issues-and-pull-requests/about-pull-request-merges), no matter the
 [strategy](https://git-scm.com/docs/merge-strategies), there may _inadvertently be changes_ which can have negative side effects. For example...
 
-> I was working on an express app with a friend and [...] I ran `git pull`. There were no merge conflicts, but _git added duplicate functions_ to a file after merge.
+> I was working on an app with a friend and [...] I ran `git pull`. There were no merge conflicts, but _git added duplicate functions_ to a file after merge.
 > I spent an hour trying to figure our what the problem was before realizing that **git had made a mistake** while merging. [ref](https://news.ycombinator.com/item?id=9871042)
 
 ## FAQ - How do I fix _"Resource not accessible by integration"_?
 
-> TL;DR use a [Personal Access Token (PAT)](https://docs.github.com/en/github/authenticating-to-github/creating-a-personal-access-token) instead **and** use the
- ([potentially dangerous](https://securitylab.github.com/research/github-actions-preventing-pwn-requests/)) event `pull_request_target`
+_This is a rapidly changing topic. Feel free to open an issue if there's any problems_
 
-It boils down to the GitHub authorization/permissions implementation. The permission given in an Action are based on [these options](https://github.blog/changelog/2021-04-20-github-actions-control-permissions-for-github_token/)
-[Event type](https://docs.github.com/en/actions/reference/events-that-trigger-workflows), for Pull Requests its the head branch from which it originates from.
-If a user without read access opens a Pull Request from their fork then it will not be granted adequate permissions to set the labels.
-See [actions/labeler#12](https://github.com/actions/labeler/issues/12), [actions/first-interaction#10](https://github.com/actions/first-interaction/issues/10),
-and [Actions are severely limited](https://github.community/t/github-actions-are-severely-limited-on-prs/18179#M9249) for more information.
+> Use the [workflow permissions](https://github.blog/changelog/2021-04-20-github-actions-control-permissions-for-github_token/) provided in the [example](#setup-a-workflow).
+
+It boils down to the GitHub Action's permissions for forks. The [default permissions](https://docs.github.com/en/actions/reference/authentication-in-a-workflow#permissions-for-the-github_token) for any [event type](https://docs.github.com/en/actions/reference/events-that-trigger-workflows) is [`read` only](https://docs.github.com/en/actions/reference/authentication-in-a-workflow#permissions-for-the-github_token). The default can be [adjusted for the repository](https://docs.github.com/en/github/administering-a-repository/disabling-or-limiting-github-actions-for-a-repository) or [set for each workflow](https://github.blog/changelog/2021-04-20-github-actions-control-permissions-for-github_token/) explicitly based.
