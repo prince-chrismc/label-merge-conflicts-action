@@ -65,7 +65,7 @@ When [merging a pull request](https://docs.github.com/en/github/collaborating-wi
 
 ## FAQ - How do I fix _"Resource not accessible by integration"_?
 
-_This is a rapidly changing topic. Feel free to open an issue if there's any problems_
+_This is a rapidly changing topic_. Feel free to [open an issue](https://github.com/prince-chrismc/label-merge-conflicts-action/issues/new?title=Question:%20Permissions&labels=help%20wanted) if there's any problems.
 
 > Use the [workflow permissions](https://github.blog/changelog/2021-04-20-github-actions-control-permissions-for-github_token/) provided in the [example](#setup-a-workflow).
 
