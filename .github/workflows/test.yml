@@ -1,12 +1,12 @@
 name: CI
-on: # rebuild any PRs and main branch changes
-  pull_request_target:
+on:
+  pull_request:
   push:
-    branches:
-      - main
+    branches: [ main ]
+  workflow_dispatch: {}
 
 jobs:
-  build: # make sure build/ci work properly
+  ci:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -34,7 +34,7 @@ jobs:
           detect_merge_changes: true
 
   coverage:
-    needs: [build, e2e]
+    needs: [ci, e2e]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
