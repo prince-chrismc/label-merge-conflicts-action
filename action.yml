@@ -2,7 +2,7 @@ name: "Label Merge Conflicts"
 description: 'Label pull requests with merge conflicts and subtle git-blob merge changes beyond those flagged by GitHub'
 author: "prince-chrismc"
 branding:
-  icon: "alert-triangle"
+  icon: "git-merge"
   color: "red"
 inputs:
   conflict_label_name:
