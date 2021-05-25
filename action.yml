@@ -1,5 +1,5 @@
 name: "Label Merge Conflicts"
-description: 'GitHub Action to automatically label PRs with a "conflict" label'
+description: 'Label pull requests with merge conflicts and subtle git-blob merge changes beyond those flagged by GitHub'
 author: "prince-chrismc"
 branding:
   icon: "alert-triangle"
