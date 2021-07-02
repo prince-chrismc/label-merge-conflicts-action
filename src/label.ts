@@ -16,8 +16,7 @@ async function applyLabelable(
   octokit: InstanceType<typeof GitHub>,
   labelable: Labelable,
   hasLabel: boolean,
-  pullRequestNumber: number,
-  context: Context
+  pullRequestNumber: number
 ) {
   if (hasLabel) {
     core.debug(`Skipping #${pullRequestNumber}, it is already labeled`)
@@ -25,7 +24,7 @@ async function applyLabelable(
   }
 
   core.info(`Labeling #${pullRequestNumber}...`)
-  await addLabelToLabelable(octokit, labelable, context)
+  await addLabelToLabelable(octokit, labelable)
 }
 
 export async function updatePullRequestConflictLabel(
@@ -40,12 +39,12 @@ export async function updatePullRequestConflictLabel(
 
   switch (pullRequest.mergeable) {
     case 'CONFLICTING':
-      await applyLabelable(octokit, labelable, hasLabel, pullRequest.number, context)
+      await applyLabelable(octokit, labelable, hasLabel, pullRequest.number)
       break
 
     case 'MERGEABLE':
       if (detectMergeChanges && (await checkPullRequestForMergeChanges(octokit, context, pullRequest))) {
-        await applyLabelable(octokit, labelable, hasLabel, pullRequest.number, context)
+        await applyLabelable(octokit, labelable, hasLabel, pullRequest.number)
         break
       }
 
