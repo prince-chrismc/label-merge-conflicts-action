@@ -318,7 +318,7 @@ const addLabelToLabelable = (octokit, { labelId, labelableId }) => __awaiter(voi
     yield octokit.graphql(query, { label: labelId, pullRequest: labelableId });
     return octokit.graphql(addComment, {
         id: labelableId,
-        body: ':warning: There is a conflict on this PR. If you are the author, please solve it.'
+        body: ':warning: @here There is a conflict on this PR. If you are the author, please solve it.'
     });
 });
 exports.addLabelToLabelable = addLabelToLabelable;
