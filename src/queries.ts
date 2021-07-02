@@ -153,7 +153,7 @@ export const addLabelToLabelable = async (
 
   return octokit.graphql(addComment, {
     id: labelableId,
-    body: ':warning: @here There is a conflict on this PR. If you are the author, please solve it.'
+    body: ':warning: There is a conflict on this PR. If you are the author, please solve it.'
   })
 }
 
