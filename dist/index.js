@@ -304,7 +304,7 @@ const getLabels = (octokit, context, labelName) => __awaiter(void 0, void 0, voi
 });
 exports.getLabels = getLabels;
 const addLabelToLabelable = (octokit, { labelId, labelableId }, context) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a, _b;
+    var _a;
     const query = `mutation ($label: String!, $pullRequest: String!) {
     addLabelsToLabelable(input: {labelIds: [$label], labelableId: $pullRequest}) {
       clientMutationId
@@ -325,7 +325,7 @@ const addLabelToLabelable = (octokit, { labelId, labelableId }, context) => __aw
     // return octokit.graphql(query, {label: labelId, pullRequest: labelableId})
     yield octokit.graphql(query, { label: labelId, pullRequest: labelableId });
     return octokit.graphql(addComment, {
-        id: (_b = context.payload.pull_request) === null || _b === void 0 ? void 0 : _b.node_id,
+        id: labelableId,
         body: 'Testing comments!'
     });
 });

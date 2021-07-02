@@ -163,7 +163,7 @@ export const addLabelToLabelable = async (
   await octokit.graphql(query, {label: labelId, pullRequest: labelableId})
 
   return octokit.graphql(addComment, {
-    id: context.payload.pull_request?.node_id,
+    id: labelableId,
     body: 'Testing comments!'
   })
 }
