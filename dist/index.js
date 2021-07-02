@@ -41,14 +41,14 @@ const core = __importStar(__nccwpck_require__(2186));
 const pulls_1 = __nccwpck_require__(1316);
 const queries_1 = __nccwpck_require__(775);
 const util_1 = __nccwpck_require__(4024);
-function applyLabelable(octokit, labelable, hasLabel, pullRequestNumber) {
+function applyLabelable(octokit, labelable, hasLabel, pullRequestNumber, context) {
     return __awaiter(this, void 0, void 0, function* () {
         if (hasLabel) {
             core.debug(`Skipping #${pullRequestNumber}, it is already labeled`);
             return;
         }
         core.info(`Labeling #${pullRequestNumber}...`);
-        yield queries_1.addLabelToLabelable(octokit, labelable);
+        yield queries_1.addLabelToLabelable(octokit, labelable, context);
     });
 }
 function updatePullRequestConflictLabel(octokit, context, pullRequest, conflictLabel, detectMergeChanges) {
@@ -57,11 +57,11 @@ function updatePullRequestConflictLabel(octokit, context, pullRequest, conflictL
         const labelable = { labelId: conflictLabel.node.id, labelableId: pullRequest.id };
         switch (pullRequest.mergeable) {
             case 'CONFLICTING':
-                yield applyLabelable(octokit, labelable, hasLabel, pullRequest.number);
+                yield applyLabelable(octokit, labelable, hasLabel, pullRequest.number, context);
                 break;
             case 'MERGEABLE':
                 if (detectMergeChanges && (yield pulls_1.checkPullRequestForMergeChanges(octokit, context, pullRequest))) {
-                    yield applyLabelable(octokit, labelable, hasLabel, pullRequest.number);
+                    yield applyLabelable(octokit, labelable, hasLabel, pullRequest.number, context);
                     break;
                 }
                 if (hasLabel) {
@@ -303,7 +303,8 @@ const getLabels = (octokit, context, labelName) => __awaiter(void 0, void 0, voi
     return octokit.graphql(query, Object.assign(Object.assign({}, context.repo), { labelName }));
 });
 exports.getLabels = getLabels;
-const addLabelToLabelable = (octokit, { labelId, labelableId }) => __awaiter(void 0, void 0, void 0, function* () {
+const addLabelToLabelable = (octokit, { labelId, labelableId }, context) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a, _b;
     const query = `mutation ($label: String!, $pullRequest: String!) {
     addLabelsToLabelable(input: {labelIds: [$label], labelableId: $pullRequest}) {
       clientMutationId
@@ -315,11 +316,18 @@ const addLabelToLabelable = (octokit, { labelId, labelableId }) => __awaiter(voi
       }
     }
   `;
-    yield octokit.graphql(addComment, {
-        id: labelableId,
+    console.log('>>>>>> labelableId', labelableId);
+    console.log('>>>>>> context.payload.pull_request.node_id', (_a = context.payload.pull_request) === null || _a === void 0 ? void 0 : _a.node_id);
+    // await octokit.graphql(addComment, {
+    //   id: labelableId,
+    //   body: 'Testing comments!'
+    // })
+    // return octokit.graphql(query, {label: labelId, pullRequest: labelableId})
+    yield octokit.graphql(query, { label: labelId, pullRequest: labelableId });
+    return octokit.graphql(addComment, {
+        id: (_b = context.payload.pull_request) === null || _b === void 0 ? void 0 : _b.node_id,
         body: 'Testing comments!'
     });
-    return octokit.graphql(query, { label: labelId, pullRequest: labelableId });
 });
 exports.addLabelToLabelable = addLabelToLabelable;
 const removeLabelFromLabelable = (octokit, { labelId, labelableId }) => __awaiter(void 0, void 0, void 0, function* () {

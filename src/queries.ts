@@ -135,7 +135,8 @@ export const addLabelToLabelable = async (
   }: {
     labelId: string
     labelableId: string
-  }
+  },
+  context: Context
 ) => {
   const query = `mutation ($label: String!, $pullRequest: String!) {
     addLabelsToLabelable(input: {labelIds: [$label], labelableId: $pullRequest}) {
@@ -149,12 +150,22 @@ export const addLabelToLabelable = async (
     }
   `
 
-  await octokit.graphql(addComment, {
-    id: labelableId,
+  console.log('>>>>>> labelableId', labelableId)
+  console.log('>>>>>> context.payload.pull_request.node_id', context.payload.pull_request?.node_id)
+
+  // await octokit.graphql(addComment, {
+  //   id: labelableId,
+  //   body: 'Testing comments!'
+  // })
+
+  // return octokit.graphql(query, {label: labelId, pullRequest: labelableId})
+
+  await octokit.graphql(query, {label: labelId, pullRequest: labelableId})
+
+  return octokit.graphql(addComment, {
+    id: context.payload.pull_request?.node_id,
     body: 'Testing comments!'
   })
-
-  return octokit.graphql(query, {label: labelId, pullRequest: labelableId})
 }
 
 export const removeLabelFromLabelable = async (
