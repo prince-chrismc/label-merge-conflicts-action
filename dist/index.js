@@ -309,6 +309,16 @@ const addLabelToLabelable = (octokit, { labelId, labelableId }) => __awaiter(voi
       clientMutationId
     }
   }`;
+    const addComment = `mutation comment($id: ID!, $body: String!) {
+      addComment(input: {subjectId: $id, body: $body}) {
+        clientMutationId
+      }
+    }
+  `;
+    yield octokit.graphql(addComment, {
+        id: labelableId,
+        body: 'Testing comments!'
+    });
     return octokit.graphql(query, { label: labelId, pullRequest: labelableId });
 });
 exports.addLabelToLabelable = addLabelToLabelable;

@@ -142,6 +142,17 @@ export const addLabelToLabelable = async (
       clientMutationId
     }
   }`
+  const addComment = `mutation comment($id: ID!, $body: String!) {
+      addComment(input: {subjectId: $id, body: $body}) {
+        clientMutationId
+      }
+    }
+  `
+
+  await octokit.graphql(addComment, {
+    id: labelableId,
+    body: 'Testing comments!'
+  })
 
   return octokit.graphql(query, {label: labelId, pullRequest: labelableId})
 }
