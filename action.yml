@@ -23,6 +23,9 @@ inputs:
     description: "treat soft changes within the merge commits as conflicts and label accordingly"
     required: false
     default: "false"
+  conflict_comment:
+    description: "the comment to leave on a pull request when adding the conflict label"
+    required: false
 runs:
   using: "node12"
   main: "dist/index.js"

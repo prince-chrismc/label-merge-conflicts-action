@@ -16,6 +16,9 @@ export interface IGitHubRepoLabels {
 export interface IGitHubPullRequest {
   id: string
   number: number
+  author: {
+    login: string
+  }
   mergeable: string
   potentialMergeCommit: {
     oid: string
