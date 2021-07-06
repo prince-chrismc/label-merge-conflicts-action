@@ -5,7 +5,10 @@
 
 ## Purpose
 
-This action _intuitively_ checks open pull request(s) for merge conflicts and marks them with a [label](https://guides.github.com/features/issues/#filtering).
+This action _intuitively_ checks open pull request(s) for merge conflicts and marks them with a [label][label-guide] and optionally leaves a [comment][pr-comments] to alter the author.
+
+[label-guide]: https://guides.github.com/features/issues/#filtering
+[pr-comments]: https://docs.github.com/en/github/collaborating-with-pull-requests/reviewing-changes-in-pull-requests/commenting-on-a-pull-request#about-pull-request-comments
 
 ![comic](https://github.com/prince-chrismc/label-merge-conflicts-action/blob/main/.github/label-merge-conflicts.png?raw=true)
 
@@ -15,7 +18,9 @@ This action _intuitively_ checks open pull request(s) for merge conflicts and ma
 
 ### Create a Label
 
-You'll need to manually create a label through GitHub. This can be done through the UI if you so with.
+You'll need to manually [create a label][create-label] through GitHub. This can be done through the UI if you so with.
+
+[create-label]: https://docs.github.com/en/issues/using-labels-and-milestones-to-track-work/managing-labels#creating-a-label
 
 ### Setup a Workflow
 
@@ -27,7 +32,7 @@ on:
   pull_request:
     branches: [master]
 
-permissions: # Optional: minimum permission required to add labels
+permissions: # Optional: minimum permission required to add labels or comments
   issues: write
   pull-requests: write
 
@@ -43,13 +48,14 @@ jobs:
           max_retries: 5
           wait_ms: 15000
           detect_merge_changes: false # or true to handle as conflicts
+          conflict_comment: ":wave: Hi, @${author},\n\nI detected conflicts against the base branch. You'll want sync :arrows_counterclockwise: your branch with upstream!"
+          # The `${author}` will be replaced with the username for who ever opened the pull requestion, this can be omitted
 ```
 
 ## Limitations
 
 1. GitHub does not reliably compute the `mergeable` status which is used by this action to detect merge conflicts.
-    * If `main` changes the mergeable status is unknown until someone (most likely this action) requests it.
-[GitHub then tries to compute the status with an async job.](https://stackoverflow.com/a/30620973)
+    * If `main` changes the mergeable status is unknown until someone (most likely this action) requests it. [GitHub then tries to compute the status with an async job.](https://stackoverflow.com/a/30620973)
     * This is usually quick and simple, but there are no guarantees and GitHub might have issues. You can tweak `max_retries` and `wait_ms` to increase the timeout before giving up on a Pull Request.
 2. GitHub does not run actions on pull requests which have conflicts
     * When there is a conflict it prevents the merge commit from being calculated. [See this thread](https://github.community/t/run-actions-on-pull-requests-with-merge-conflicts/17104).
@@ -58,7 +64,7 @@ jobs:
 ## FAQ - What are _Merge Changes_?
 
 When [merging a pull request](https://docs.github.com/en/github/collaborating-with-issues-and-pull-requests/about-pull-request-merges), no matter the
-[strategy](https://git-scm.com/docs/merge-strategies), there may _inadvertently be changes_ (i.e 
+[strategy](https://git-scm.com/docs/merge-strategies), there may _inadvertently be changes_ (i.e
 [git blobs](https://git-scm.com/book/en/v2/Git-Internals-Git-Objects) which over lap and need to be recombined) which can have negative side effects. For example...
 
 > I was working on an app with a friend and [...] I ran `git pull`. There were no merge conflicts, but _git added duplicate functions_ to a file after merge.
@@ -73,15 +79,15 @@ If a user without write access opens a 'Pull Request' from their fork then GitHu
 [details here](https://github.blog/changelog/2021-04-20-github-actions-control-permissions-for-github_token/#setting-permissions-in-the-workflow).
 Hence the _not accessible_ error. Try the following steps:
 
-- using the ([potentially dangerous](https://securitylab.github.com/research/github-actions-preventing-pwn-requests/)) event `pull_request_target`
-- setting the [workflow permissions](https://github.blog/changelog/2021-04-20-github-actions-control-permissions-for-github_token/) provided in the
+* using the ([potentially dangerous](https://securitylab.github.com/research/github-actions-preventing-pwn-requests/)) event `pull_request_target`
+* setting the [workflow permissions](https://github.blog/changelog/2021-04-20-github-actions-control-permissions-for-github_token/) provided in the
 [example](#setup-a-workflow).
 
 It boils down to the GitHub Action's permissions current behavoir.
 The [default permissions](https://docs.github.com/en/actions/reference/authentication-in-a-workflow#permissions-for-the-github_token) for any
-[event type](https://docs.github.com/en/actions/reference/events-that-trigger-workflows) is 
-[`read` only](https://docs.github.com/en/actions/reference/authentication-in-a-workflow#permissions-for-the-github_token). The default can be 
-[adjusted for the repository](https://docs.github.com/en/github/administering-a-repository/disabling-or-limiting-github-actions-for-a-repository) or 
+[event type](https://docs.github.com/en/actions/reference/events-that-trigger-workflows) is
+[`read` only](https://docs.github.com/en/actions/reference/authentication-in-a-workflow#permissions-for-the-github_token). The default can be
+[adjusted for the repository](https://docs.github.com/en/github/administering-a-repository/disabling-or-limiting-github-actions-for-a-repository) or
 [set for each workflow](https://github.blog/changelog/2021-04-20-github-actions-control-permissions-for-github_token/) explicitly. However, as per the documentation...
 
 > Pull requests from public forks are still considered a special case and will receive a read token regardless of these settings.
