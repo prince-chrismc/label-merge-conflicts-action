@@ -1727,6 +1727,174 @@ describe('queries', () => {
 
       expect(mock).not.toBeCalled()
     })
+    test('push event works with comment', async () => {
+      github.context.eventName = 'push'
+
+      const scope = nock('https://api.github.com', {
+        reqheaders: {
+          authorization: 'token justafaketoken'
+        }
+      })
+        .post('/graphql')
+        .reply(200, {
+          data: {repository: {labels: {edges: [{node: {id: 'MDU6TGFiZWwyNzYwMjE1ODI0', name: 'expected_label'}}]}}}
+        })
+        .post('/graphql')
+        .reply(200, {
+          data: {
+            repository: {
+              pullRequests: {
+                edges: [
+                  {
+                    node: {
+                      id: 'MDExOlB1bGxSZXF1ZXN0NDQzNTg3NjI1',
+                      number: 2109,
+                      author: {
+                        login: 'justausername'
+                      },
+                      mergeable: 'UNKNOWN',
+                      potentialMergeCommit: {
+                        oid: 'dbe715994ec0bd51813f9e2b3e250c3e6b7dcf30'
+                      },
+                      labels: {
+                        edges: [
+                          {
+                            node: {
+                              id: 'MDU6TGFiZWwxNTI3NTYzMTMy',
+                              name: 'Failed'
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  {
+                    node: {
+                      id: 'MDExOlB1bGxSZXF1ZXN0NDYxODY4OTkz',
+                      number: 2370,
+                      author: {
+                        login: 'justausername'
+                      },
+                      mergeable: 'MERGEABLE',
+                      potentialMergeCommit: {
+                        oid: 'cdb96fa3e8b19bb280fec137bd26a8144fdabeac'
+                      },
+                      labels: {
+                        edges: [
+                          {
+                            node: {
+                              id: 'MDU6TGFiZWwxNTI3NTYzMTMy',
+                              name: 'Failed'
+                            }
+                          },
+                          {
+                            node: {
+                              id: 'MDU6TGFiZWwxNjMxNDkxOTY1',
+                              name: 'blocked'
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  }
+                ],
+                pageInfo: {
+                  endCursor: 'Y3Vyc29yOnYyOpHOG4ePwQ==',
+                  hasNextPage: false
+                }
+              }
+            }
+          }
+        })
+        .post('/graphql')
+        .reply(200, {
+          data: {
+            repository: {
+              pullRequests: {
+                edges: [
+                  {
+                    node: {
+                      id: 'MDExOlB1bGxSZXF1ZXN0NDQzNTg3NjI1',
+                      number: 2109,
+                      author: {
+                        login: 'justausername'
+                      },
+                      mergeable: 'CONFLICTING',
+                      potentialMergeCommit: {
+                        oid: 'dbe715994ec0bd51813f9e2b3e250c3e6b7dcf30'
+                      },
+                      labels: {
+                        edges: [
+                          {
+                            node: {
+                              id: 'MDU6TGFiZWwxNTI3NTYzMTMy',
+                              name: 'Failed'
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  {
+                    node: {
+                      id: 'MDExOlB1bGxSZXF1ZXN0NDYxODY4OTkz',
+                      number: 2370,
+                      author: {
+                        login: 'justausername'
+                      },
+                      mergeable: 'MERGEABLE',
+                      potentialMergeCommit: {
+                        oid: 'cdb96fa3e8b19bb280fec137bd26a8144fdabeac'
+                      },
+                      labels: {
+                        edges: [
+                          {
+                            node: {
+                              id: 'MDU6TGFiZWwxNTI3NTYzMTMy',
+                              name: 'Failed'
+                            }
+                          },
+                          {
+                            node: {
+                              id: 'MDU6TGFiZWwxNjMxNDkxOTY1',
+                              name: 'blocked'
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  }
+                ],
+                pageInfo: {
+                  endCursor: 'Y3Vyc29yOnYyOpHOG4ePwQ==',
+                  hasNextPage: false
+                }
+              }
+            }
+          }
+        })
+        .post(
+          '/graphql',
+          /addLabelsToLabelable.*variables.*MDU6TGFiZWwyNzYwMjE1ODI0.*MDExOlB1bGxSZXF1ZXN0NDQzNTg3NjI1.*/
+        )
+        .reply(200, {data: {}})
+        .post('/graphql', /addComment.*variables.*MDExOlB1bGxSZXF1ZXN0NDQzNTg3NjI1.*super awesome comment.*/)
+        .reply(200, {data: {clientMutationId: 'auniqueid'}})
+
+      const mock = jest.spyOn(core, 'setFailed').mockImplementation(jest.fn())
+
+      inputs['conflict_label_name'] = 'expected_label'
+      inputs['github_token'] = 'justafaketoken'
+      inputs['conflict_comment'] = 'super awesome comment'
+      // inputs['max_retries'] = '1'
+      inputs['wait_ms'] = '25'
+
+      expect(github.context.eventName).toBe('push')
+
+      await run()
+
+      expect(mock).not.toBeCalled()
+    })
 
     test('pull_request event works', async () => {
       github.context.eventName = 'pull_request'
