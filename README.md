@@ -49,7 +49,8 @@ jobs:
           wait_ms: 15000
           detect_merge_changes: false # or true to handle as conflicts
           conflict_comment: ":wave: Hi, @${author},\n\nI detected conflicts against the base branch. You'll want sync :arrows_counterclockwise: your branch with upstream!"
-          # The `${author}` will be replaced with the username for who ever opened the pull requestion, this can be omitted
+          # The `${author}` will be replaced with the username of who ever opened the pull requestion, this can be omitted
+          # Ommiting `conflict_comment` will disable commenting, only a label will be applied
 ```
 
 ## Limitations
