@@ -1147,14 +1147,17 @@ describe('queries', () => {
             /addLabelsToLabelable.*variables.*MDU6TGFiZWwyNzYwMjE1ODI0.*MDExOlB1bGxSZXF1ZXN0NTc4ODgyNDUw.*/
           )
           .reply(200, {data: {clientMutationId: 'auniqueid'}})
-          .post('/graphql', /addComment.*variables.*MDExOlB1bGxSZXF1ZXN0NTc4ODgyNDUw.*super awesome comment.*/)
+          .post(
+            '/graphql',
+            /addComment.*variables.*MDExOlB1bGxSZXF1ZXN0NTc4ODgyNDUw.*justausername's super awesome comment.*/
+          )
           .reply(200, {data: {clientMutationId: 'auniqueid'}})
 
         const pullRequest = makePr('CONFLICTING')
         const octokit = github.getOctokit('justafaketoken')
         const added = updatePullRequestConflictLabel(octokit, github.context, pullRequest, expectedLabel, false, {
           apply: true,
-          body: 'super awesome comment'
+          body: "${author}'s super awesome comment"
         })
 
         await expect(added).resolves.toBe(undefined)
@@ -1596,6 +1599,9 @@ describe('queries', () => {
                     node: {
                       id: 'MDExOlB1bGxSZXF1ZXN0NDQzNTg3NjI1',
                       number: 2109,
+                      author: {
+                        login: 'justausername'
+                      },
                       mergeable: 'UNKNOWN',
                       potentialMergeCommit: {
                         oid: 'dbe715994ec0bd51813f9e2b3e250c3e6b7dcf30'
@@ -1616,6 +1622,9 @@ describe('queries', () => {
                     node: {
                       id: 'MDExOlB1bGxSZXF1ZXN0NDYxODY4OTkz',
                       number: 2370,
+                      author: {
+                        login: 'justausername'
+                      },
                       mergeable: 'MERGEABLE',
                       potentialMergeCommit: {
                         oid: 'cdb96fa3e8b19bb280fec137bd26a8144fdabeac'
@@ -1657,6 +1666,9 @@ describe('queries', () => {
                     node: {
                       id: 'MDExOlB1bGxSZXF1ZXN0NDQzNTg3NjI1',
                       number: 2109,
+                      author: {
+                        login: 'justausername'
+                      },
                       mergeable: 'CONFLICTING',
                       potentialMergeCommit: {
                         oid: 'dbe715994ec0bd51813f9e2b3e250c3e6b7dcf30'
@@ -1677,6 +1689,9 @@ describe('queries', () => {
                     node: {
                       id: 'MDExOlB1bGxSZXF1ZXN0NDYxODY4OTkz',
                       number: 2370,
+                      author: {
+                        login: 'justausername'
+                      },
                       mergeable: 'MERGEABLE',
                       potentialMergeCommit: {
                         oid: 'cdb96fa3e8b19bb280fec137bd26a8144fdabeac'
@@ -1916,6 +1931,9 @@ describe('queries', () => {
               pullRequest: {
                 id: 'MDExOlB1bGxSZXF1ZXN0NDQzNTg3NjI1',
                 number: mockPullRequestEvent.number,
+                author: {
+                  login: 'justausername'
+                },
                 mergeable: 'UNKNOWN',
                 potentialMergeCommit: {
                   oid: 'dbe715994ec0bd51813f9e2b3e250c3e6b7dcf30'
@@ -1941,6 +1959,9 @@ describe('queries', () => {
               pullRequest: {
                 id: 'MDExOlB1bGxSZXF1ZXN0NDQzNTg3NjI1',
                 number: mockPullRequestEvent.number,
+                author: {
+                  login: 'justausername'
+                },
                 mergeable: 'CONFLICTING',
                 potentialMergeCommit: {
                   oid: 'dbe715994ec0bd51813f9e2b3e250c3e6b7dcf30'
