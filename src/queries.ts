@@ -21,6 +21,9 @@ const getPullRequestPages = async (
           node {
             id
             number
+            author {
+              login
+            }
             mergeable
             potentialMergeCommit {
               oid 
