@@ -79,6 +79,9 @@ export const getPullRequest = async (
       pullRequest(number: $number) {
         id
         number
+        author {
+          login
+        }
         mergeable
         potentialMergeCommit {
           oid
@@ -142,19 +145,18 @@ export const addLabelToLabelable = async (
       clientMutationId
     }
   }`
-  const addComment = `mutation comment($id: ID!, $body: String!) {
-      addComment(input: {subjectId: $id, body: $body}) {
-        clientMutationId
-      }
+
+  return octokit.graphql(query, {label: labelId, pullRequest: labelableId})
+}
+
+export const addCommentToSubject = async (octokit: InstanceType<typeof GitHub>, labelableId: string, body: string) => {
+  const query = `mutation comment($id: ID!, $body: String!) {
+    addComment(input: {subjectId: $id, body: $body}) {
+      clientMutationId
     }
-  `
+  }`
 
-  await octokit.graphql(query, {label: labelId, pullRequest: labelableId})
-
-  return octokit.graphql(addComment, {
-    id: labelableId,
-    body: ':warning: There is a conflict on this PR. If you are the author, please solve it.'
-  })
+  return octokit.graphql(query, {id: labelableId, body})
 }
 
 export const removeLabelFromLabelable = async (

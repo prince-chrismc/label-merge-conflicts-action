@@ -23,6 +23,10 @@ export async function run(): Promise<void> {
     const detectMergeChanges = core.getInput('detect_merge_changes') === 'true'
     core.debug(`detectMergeChanges=${detectMergeChanges}`)
 
+    const commentTemplate = core.getInput('conflict_comment')
+    const applyComment = (commentTemplate && commentTemplate !== '') as boolean
+    core.debug(`applyComment=${applyComment} commentTemplate=${commentTemplate}`)
+
     // Get the label to use
     const conflictLabel = findLabelByName(
       await getLabels(octokit, github.context, conflictLabelName),
@@ -30,10 +34,16 @@ export async function run(): Promise<void> {
     )
 
     if (github.context.eventName === 'pull_request') {
-      return await runOnPullRequest(octokit, github.context, conflictLabel, waitMs, maxRetries, detectMergeChanges)
+      return await runOnPullRequest(octokit, github.context, conflictLabel, waitMs, maxRetries, detectMergeChanges, {
+        apply: applyComment,
+        body: commentTemplate
+      })
     }
 
-    await runOnAll(octokit, github.context, conflictLabel, waitMs, maxRetries, detectMergeChanges)
+    await runOnAll(octokit, github.context, conflictLabel, waitMs, maxRetries, detectMergeChanges, {
+      apply: applyComment,
+      body: commentTemplate
+    })
   } catch (error) {
     core.setFailed(error.message)
   }
@@ -45,7 +55,8 @@ export async function runOnPullRequest(
   conflictLabel: IGitHubLabelNode,
   waitMs: number,
   maxRetries: number,
-  detectMergeChanges: boolean
+  detectMergeChanges: boolean,
+  comment: {apply: boolean; body?: string}
 ): Promise<void> {
   const prEvent = context.payload as PullRequestEvent
   core.startGroup(`🔎 Gather data for Pull Request #${prEvent.number}`)
@@ -53,7 +64,7 @@ export async function runOnPullRequest(
   core.endGroup()
 
   core.startGroup('🏷️ Updating labels')
-  await updatePullRequestConflictLabel(octokit, context, pr, conflictLabel, detectMergeChanges)
+  await updatePullRequestConflictLabel(octokit, context, pr, conflictLabel, detectMergeChanges, comment)
   core.endGroup()
 }
 
@@ -63,7 +74,8 @@ export async function runOnAll(
   conflictLabel: IGitHubLabelNode,
   waitMs: number,
   maxRetries: number,
-  detectMergeChanges: boolean
+  detectMergeChanges: boolean,
+  comment: {apply: boolean; body?: string}
 ): Promise<void> {
   core.startGroup('🔎 Gather data for all Pull Requests')
   const pullRequests = await gatherPullRequests(octokit, context, waitMs, maxRetries)
@@ -71,7 +83,7 @@ export async function runOnAll(
 
   core.startGroup('🏷️ Updating labels')
   for (const pullRequest of pullRequests) {
-    await updatePullRequestConflictLabel(octokit, context, pullRequest.node, conflictLabel, detectMergeChanges)
+    await updatePullRequestConflictLabel(octokit, context, pullRequest.node, conflictLabel, detectMergeChanges, comment)
   }
   core.endGroup()
 }

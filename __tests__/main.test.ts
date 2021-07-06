@@ -71,6 +71,9 @@ describe('pr label checking', () => {
     return {
       id: 'MDExOlB1bGxSZXF1ZXN0NTc4ODgyNDUw',
       number: 7,
+      author: {
+        login: 'justausername'
+      },
       mergeable: 'MERGEABLE',
       potentialMergeCommit: {
         oid: '5ed0e15d4ca4ce73e847ee1f0369ee85a6e67bc9'
@@ -973,6 +976,9 @@ describe('queries', () => {
         node: {
           id: 'MDExOlB1bGxSZXF1ZXN0NTc4ODgyNDUw',
           number: 7,
+          author: {
+            login: 'justausername'
+          },
           mergeable: 'MERGEABLE',
           potentialMergeCommit: {
             oid: '5ed0e15d4ca4ce73e847ee1f0369ee85a6e67bc9'
@@ -1097,6 +1103,9 @@ describe('queries', () => {
       return {
         id: 'MDExOlB1bGxSZXF1ZXN0NTc4ODgyNDUw',
         number: 7,
+        author: {
+          login: 'justausername'
+        },
         mergeable: mergeable,
         potentialMergeCommit: {
           oid: '5ed0e15d4ca4ce73e847ee1f0369ee85a6e67bc9'
@@ -1120,7 +1129,33 @@ describe('queries', () => {
 
         const pullRequest = makePr('CONFLICTING')
         const octokit = github.getOctokit('justafaketoken')
-        const added = updatePullRequestConflictLabel(octokit, github.context, pullRequest, expectedLabel, false)
+        const added = updatePullRequestConflictLabel(octokit, github.context, pullRequest, expectedLabel, false, {
+          apply: false
+        })
+
+        await expect(added).resolves.toBe(undefined)
+      })
+
+      it('adds a new label and comment', async () => {
+        const scope = nock('https://api.github.com', {
+          reqheaders: {
+            authorization: 'token justafaketoken'
+          }
+        })
+          .post(
+            '/graphql',
+            /addLabelsToLabelable.*variables.*MDU6TGFiZWwyNzYwMjE1ODI0.*MDExOlB1bGxSZXF1ZXN0NTc4ODgyNDUw.*/
+          )
+          .reply(200, {data: {clientMutationId: 'auniqueid'}})
+          .post('/graphql', /addComment.*variables.*MDExOlB1bGxSZXF1ZXN0NTc4ODgyNDUw.*super awesome comment.*/)
+          .reply(200, {data: {clientMutationId: 'auniqueid'}})
+
+        const pullRequest = makePr('CONFLICTING')
+        const octokit = github.getOctokit('justafaketoken')
+        const added = updatePullRequestConflictLabel(octokit, github.context, pullRequest, expectedLabel, false, {
+          apply: true,
+          body: 'super awesome comment'
+        })
 
         await expect(added).resolves.toBe(undefined)
       })
@@ -1142,7 +1177,36 @@ describe('queries', () => {
 
         const pullRequest = makePr('CONFLICTING')
         const octokit = github.getOctokit('justafaketoken')
-        const added = updatePullRequestConflictLabel(octokit, github.context, pullRequest, expectedLabel, false)
+        const added = updatePullRequestConflictLabel(octokit, github.context, pullRequest, expectedLabel, false, {
+          apply: false
+        })
+
+        await expect(added).rejects.toThrowError()
+      })
+
+      it('throws on comment error response', async () => {
+        const scope = nock('https://api.github.com', {
+          reqheaders: {
+            authorization: 'token justafaketoken'
+          }
+        })
+          .post(
+            '/graphql',
+            /addLabelsToLabelable.*variables.*MDU6TGFiZWwyNzYwMjE1ODI0.*MDExOlB1bGxSZXF1ZXN0NTc4ODgyNDUw.*/
+          )
+          .reply(200, {data: {clientMutationId: 'auniqueid'}})
+          .post('/graphql', /addComment.*variables.*MDExOlB1bGxSZXF1ZXN0NTc4ODgyNDUw.*super awesome comment.*/)
+          .reply(400, {
+            message: 'Body should be a JSON object',
+            documentation_url: 'https://docs.github.com/graphql'
+          })
+
+        const pullRequest = makePr('CONFLICTING')
+        const octokit = github.getOctokit('justafaketoken')
+        const added = updatePullRequestConflictLabel(octokit, github.context, pullRequest, expectedLabel, false, {
+          apply: true,
+          body: 'super awesome comment'
+        })
 
         await expect(added).rejects.toThrowError()
       })
@@ -1152,7 +1216,10 @@ describe('queries', () => {
 
         const octokit = github.getOctokit('justafaketoken')
         const mockFunction = jest.spyOn(octokit, 'graphql').mockImplementation(jest.fn())
-        await updatePullRequestConflictLabel(octokit, github.context, pullRequest, expectedLabel, false)
+        await updatePullRequestConflictLabel(octokit, github.context, pullRequest, expectedLabel, false, {
+          apply: true,
+          body: 'super awesome comment'
+        })
 
         expect(mockFunction).not.toBeCalled()
       })
@@ -1174,7 +1241,10 @@ describe('queries', () => {
         const pullRequest = makePr('MERGEABLE', expectedLabel)
 
         const octokit = github.getOctokit('justafaketoken')
-        const removed = updatePullRequestConflictLabel(octokit, github.context, pullRequest, expectedLabel, false)
+        const removed = updatePullRequestConflictLabel(octokit, github.context, pullRequest, expectedLabel, false, {
+          apply: true,
+          body: 'super awesome comment'
+        })
 
         await expect(removed).resolves.toBe(undefined)
       })
@@ -1193,7 +1263,10 @@ describe('queries', () => {
 
         const pullRequest = makePr('MERGEABLE', expectedLabel)
         const octokit = github.getOctokit('justafaketoken')
-        const removed = updatePullRequestConflictLabel(octokit, github.context, pullRequest, expectedLabel, false)
+        const removed = updatePullRequestConflictLabel(octokit, github.context, pullRequest, expectedLabel, false, {
+          apply: true,
+          body: 'super awesome comment'
+        })
 
         await expect(removed).rejects.toThrowError()
       })
@@ -1203,7 +1276,10 @@ describe('queries', () => {
 
         const octokit = github.getOctokit('justafaketoken')
         const mockFunction = jest.spyOn(octokit, 'graphql').mockImplementation(jest.fn())
-        await updatePullRequestConflictLabel(octokit, github.context, pullRequest, expectedLabel, false)
+        await updatePullRequestConflictLabel(octokit, github.context, pullRequest, expectedLabel, false, {
+          apply: true,
+          body: 'super awesome comment'
+        })
 
         expect(mockFunction).not.toBeCalled()
       })
@@ -1283,12 +1359,15 @@ describe('queries', () => {
           .reply(200, {data: {}})
 
         const octokit = github.getOctokit('justafaketoken')
-        const removed = updatePullRequestConflictLabel(octokit, github.context, pullRequest, expectedLabel, true)
+        const removed = updatePullRequestConflictLabel(octokit, github.context, pullRequest, expectedLabel, true, {
+          apply: true,
+          body: 'super awesome comment'
+        })
 
         await expect(removed).resolves.toBe(undefined)
       })
 
-      it('removes an old label', async () => {
+      it('adds a conflict label', async () => {
         const pullRequest = makePr('MERGEABLE', expectedLabel)
         const scope = nock('https://api.github.com', {
           reqheaders: {
@@ -1375,7 +1454,106 @@ describe('queries', () => {
           .reply(200, {data: {}})
 
         const octokit = github.getOctokit('justafaketoken')
-        const add = updatePullRequestConflictLabel(octokit, github.context, pullRequest, expectedLabel, true)
+        const add = updatePullRequestConflictLabel(octokit, github.context, pullRequest, expectedLabel, true, {
+          apply: false
+        })
+
+        await expect(add).resolves.toBe(undefined)
+      })
+
+      it('adds a conflict label and comment', async () => {
+        const pullRequest = makePr('MERGEABLE', expectedLabel)
+        const scope = nock('https://api.github.com', {
+          reqheaders: {
+            authorization: 'token justafaketoken'
+          }
+        })
+          .get(
+            `/repos/${github.context.repo.owner}/${github.context.repo.repo}/pulls/${pullRequest.number}/files?per_page=300`
+          )
+          .reply(200, [
+            {
+              sha: 'e1dde8f65c711ea3bd2a66557650a3606bf37c7f',
+              filename: 'recipes/libwebp/all/conandata.yml',
+              status: 'modified',
+              patch:
+                '@@ -5,6 +5,9 @@ sources:\n   "1.1.0":\n     url: "https://github.com/webmproject/libwebp/archive/v1.1.0.ta...'
+            },
+            {
+              sha: '6c1a86ff50796a44a635a5267ae7322f1c3252d6',
+              filename: 'recipes/libwebp/config.yml',
+              status: 'modified',
+              patch:
+                '@@ -3,3 +3,5 @@ versions:\n     folder: all\n   "1.1.0":\n     folder: all\n+  "1.2.0":\n+    folder: all'
+            }
+          ])
+          .get(
+            `/repos/${github.context.repo.owner}/${github.context.repo.repo}/commits/${pullRequest.potentialMergeCommit.oid}`
+          )
+          .reply(200, {
+            sha: 'd98404b1b9ebbc0397da93b81244511ab11867fe',
+            node_id: 'MDY6Q29tbWl0MjA0NjcxMjMyOmQ5ODQwNGIxYjllYmJjMDM5N2RhOTNiODEyNDQ1MTFhYjExODY3ZmU=',
+            commit: {
+              author: {
+                name: 'SpaceIm',
+                email: '30052553+SpaceIm@users.noreply.github.com',
+                date: '2021-03-13T20:07:06Z'
+              },
+              committer: {
+                name: 'GitHub',
+                email: 'noreply@github.com',
+                date: '2021-03-13T20:07:06Z'
+              },
+              message: 'Merge 4e3af1d3e958c8ad18c374d5254a52501980432d into c14910196b33ef8b99737078e284171a73418c17'
+            },
+            author: {
+              login: 'SpaceIm',
+              id: 30052553,
+              node_id: 'MDQ6VXNlcjMwMDUyNTUz'
+            },
+            committer: {
+              login: 'web-flow',
+              id: 19864447,
+              node_id: 'MDQ6VXNlcjE5ODY0NDQ3'
+            },
+            parents: [
+              {
+                sha: 'c14910196b33ef8b99737078e284171a73418c17'
+              },
+              {
+                sha: '4e3af1d3e958c8ad18c374d5254a52501980432d'
+              }
+            ],
+            files: [
+              {
+                sha: 'e1dde8f65c711ea3bd2a66557650a3606bf37c7f',
+                filename: 'recipes/libwebp/all/conandata.yml',
+                status: 'modified',
+                patch:
+                  '@@ -5,6 +5,9 @@ sources:\n   "1.1.0":\n     url: "https://github.com/webmproject/libwebp/archive/v1.1.0.ta...'
+              },
+              {
+                sha: '6c1a86ff50796a44b635a5267ae7322f1c3252d6',
+                filename: 'recipes/libwebp/config.yml',
+                status: 'modified',
+                patch:
+                  '@@ -3,3 +3,5 @@ versions:\n     folder: all\n   "1.1.0":\n     folder: all\n+  "1.2.0":\n+    folder: all'
+              }
+            ]
+          })
+          .post(
+            '/graphql',
+            /addLabelsToLabelable.*variables.*MDU6TGFiZWwyNzYwMjE1ODI0.*MDExOlB1bGxSZXF1ZXN0NDQzNTg3NjI1.*/
+          )
+          .reply(200, {data: {}})
+          .post('/graphql', /addComment.*variables.*MDExOlB1bGxSZXF1ZXN0NTc4ODgyNDUw.*super awesome comment.*/)
+          .reply(200, {data: {clientMutationId: 'auniqueid'}})
+
+        const octokit = github.getOctokit('justafaketoken')
+        const add = updatePullRequestConflictLabel(octokit, github.context, pullRequest, expectedLabel, true, {
+          apply: true,
+          body: 'super awesome comment'
+        })
 
         await expect(add).resolves.toBe(undefined)
       })
@@ -1386,7 +1564,10 @@ describe('queries', () => {
 
       const octokit = github.getOctokit('justafaketoken')
       const mockFunction = jest.spyOn(octokit, 'graphql').mockImplementation(jest.fn())
-      await updatePullRequestConflictLabel(octokit, github.context, pullRequest, expectedLabel, false)
+      await updatePullRequestConflictLabel(octokit, github.context, pullRequest, expectedLabel, false, {
+        apply: true,
+        body: 'super awesome comment'
+      })
 
       expect(mockFunction).not.toBeCalled()
     })
