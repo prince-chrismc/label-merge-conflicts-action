@@ -2,7 +2,7 @@ import * as core from '@actions/core'
 import * as github from '@actions/github'
 import {Context} from '@actions/github/lib/context'
 import {GitHub} from '@actions/github/lib/utils'
-import {PullRequestEvent} from '@octokit/webhooks-definitions/schema'
+import {PullRequestEvent} from '@octokit/webhooks-definitions/schema' // eslint-disable-line import/no-unresolved
 
 import {getLabels} from './queries'
 import {findLabelByName} from './util'
