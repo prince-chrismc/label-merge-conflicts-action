@@ -11,6 +11,8 @@
       "semi": ["error", "never"],
       "import/no-namespace": "off",
       "eslint-comments/no-use": ["error", {"allow": ["eslint-disable-line"]}],
+      "i18n-text/no-en": "off",
+      "sort-imports": "off",
       "@typescript-eslint/no-unused-vars": "error",
       "@typescript-eslint/explicit-member-accessibility": ["error", {"accessibility": "no-public"}],
       "@typescript-eslint/no-require-imports": "error",
