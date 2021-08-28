@@ -2016,7 +2016,7 @@ describe('queries', () => {
       inputs['wait_ms'] = '25'
       await run()
 
-      expect(mock).toBeCalledWith('The label "this will not match" was not found in your repository!')
+      expect(mock).toBeCalledWith(new Error('The label "this will not match" was not found in your repository!'))
     })
   })
 })
