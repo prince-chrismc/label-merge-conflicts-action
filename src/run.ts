@@ -45,7 +45,7 @@ export async function run(): Promise<void> {
       body: commentTemplate
     })
   } catch (error) {
-    core.setFailed(error.message)
+    core.setFailed(error as Error)
   }
 }
 
