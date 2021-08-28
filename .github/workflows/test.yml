@@ -10,6 +10,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
+        with:
+          token: ${{ secrets.REPO_PAT }}
       - uses: actions/cache@v2
         with:
           path: node_modules
@@ -19,8 +21,6 @@ jobs:
       - uses: EndBug/add-and-commit@v7
         if: ${{ github.ref != 'refs/heads/main' }}
         with:
-          author_name: github-actions[bot]
-          author_email: github-actions[bot]@users.noreply.github.com
           message: 'auto commit: linting and/or packing changes'
           add: '*'
 
