@@ -21,12 +21,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - uses: lannonbr/repo-permission-check-action@2.0.2
+      - id: check
+        uses: prince-chrismc/repo-permission-check-action@47be9fe19402c83ada0df3cda88a5e57464db20c
         with:
-          permission: "write"
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - uses: ./
+          permission: write
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          fail: false
+      - if: steps.check.outputs.permitted == 'true'
+        uses: ./
         with:
           conflict_label_name: "has conflict"
           github_token: ${{ secrets.REPO_PAT }}
