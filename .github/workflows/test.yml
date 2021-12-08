@@ -47,6 +47,6 @@ jobs:
           key: ${{ runner.os }}-${{ hashFiles('**/yarn.lock') }}
       - run: yarn install
       - run: yarn test --coverage
-      - uses: codecov/codecov-action@v1
+      - uses: codecov/codecov-action@v2
         with:
           directory: coverage/
