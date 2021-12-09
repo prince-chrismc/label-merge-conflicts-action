@@ -6,7 +6,19 @@ on:
   workflow_dispatch: {}
 
 jobs:
+  check:
+    runs-on: ubuntu-latest
+    outputs:
+      permitted: ${{ steps.check.outputs.permitted }}
+    steps:
+      - id: check
+        uses: prince-chrismc/repo-permission-check-action@47be9fe19402c83ada0df3cda88a5e57464db20c
+        with:
+          permission: write
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          fail: false
   ci:
+    needs: check
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -16,19 +28,16 @@ jobs:
           key: ${{ runner.os }}-${{ hashFiles('**/yarn.lock') }}
       - run: yarn install
       - run: yarn all
+      - run: git add --update
+      - uses: dtinth/patch-generator-action@v1
 
   e2e: # make sure the action works on a clean machine without building
+    needs: check
     runs-on: ubuntu-latest
+    if: needs.check.outputs.permitted == 'true'
     steps:
       - uses: actions/checkout@v2
-      - id: check
-        uses: prince-chrismc/repo-permission-check-action@47be9fe19402c83ada0df3cda88a5e57464db20c
-        with:
-          permission: write
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          fail: false
-      - if: steps.check.outputs.permitted == 'true'
-        uses: ./
+      - uses: ./
         with:
           conflict_label_name: "has conflict"
           github_token: ${{ secrets.REPO_PAT }}
