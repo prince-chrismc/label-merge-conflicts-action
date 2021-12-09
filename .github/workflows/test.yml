@@ -6,28 +6,41 @@ on:
   workflow_dispatch: {}
 
 jobs:
+  check:
+    runs-on: ubuntu-latest
+    outputs:
+      permitted: ${{ steps.check.outputs.permitted }}
+    steps:
+      - id: check
+        uses: prince-chrismc/repo-permission-check-action@47be9fe19402c83ada0df3cda88a5e57464db20c
+        with:
+          permission: write
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          fail: false
   ci:
+    needs: check
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-        with:
-          token: ${{ secrets.REPO_PAT }}
       - uses: actions/cache@v2
         with:
           path: node_modules
           key: ${{ runner.os }}-${{ hashFiles('**/yarn.lock') }}
       - run: yarn install
       - run: yarn all
-      - uses: EndBug/add-and-commit@v7
-        if: ${{ github.ref != 'refs/heads/main' }}
+      - run: git add --update
+      - if: needs.check.outputs.permitted != 'true'
+        uses: dtinth/patch-generator-action@v1
+      - if: needs.check.outputs.permitted == 'true'
+        uses: EndBug/add-and-commit@v7
         with:
-          author_name: github-actions[bot]
-          author_email: github-actions[bot]@users.noreply.github.com
+          default_author: github_actions
           message: 'auto commit: linting and/or packing changes'
-          add: '*'
 
   e2e: # make sure the action works on a clean machine without building
+    needs: check
     runs-on: ubuntu-latest
+    if: needs.check.outputs.permitted == 'true'
     steps:
       - uses: actions/checkout@v2
       - uses: ./
@@ -37,7 +50,7 @@ jobs:
           detect_merge_changes: true
 
   coverage:
-    needs: [ci, e2e]
+    needs: ci
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
