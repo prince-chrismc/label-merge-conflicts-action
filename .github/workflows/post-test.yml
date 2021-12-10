@@ -20,9 +20,8 @@ jobs:
         run_id: ${{ github.event.workflow_run.id }}
         name: git-patch
         path: /tmp
-    - if: failure()
-      run: exit 0
     - run: git apply /tmp/fix.diff --index
+      continue-on-error: true
     - uses: EndBug/add-and-commit@v7
       with:
         default_author: github_actions
