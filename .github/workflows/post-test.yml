@@ -1,3 +1,5 @@
+name: Post CI Completed
+
 on: 
   workflow_run:
     workflows: ["CI"]
@@ -17,6 +19,8 @@ jobs:
         run_id: ${{ github.event.workflow_run.id }}
         name: git-patch
         path: /tmp
+    - if: failure()
+      run: exit 0
     - run: git apply /tmp/fix.diff --index
     - uses: EndBug/add-and-commit@v7
       with:
