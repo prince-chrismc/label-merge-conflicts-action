@@ -13,6 +13,7 @@ jobs:
       with:
         token: ${{ secrets.REPO_PAT }}
     - name: Download artifact
+      continue-on-error: true
       uses: dawidd6/action-download-artifact@v2
       with:
         workflow: test.yml
