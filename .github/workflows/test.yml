@@ -12,11 +12,12 @@ jobs:
       permitted: ${{ steps.check.outputs.permitted }}
     steps:
       - id: check
-        uses: prince-chrismc/repo-permission-check-action@47be9fe19402c83ada0df3cda88a5e57464db20c
+        continue-on-error: true
+        uses: prince-chrismc/repo-permission-check-action@f03cef60ffaba9e7069fc0b9d3cf6d43a323c83d
         with:
           permission: write
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          fail: false
+
   ci:
     needs: check
     runs-on: ubuntu-latest
@@ -30,7 +31,7 @@ jobs:
       - run: yarn all
       - run: git add --update
       - if: needs.check.outputs.permitted != 'true'
-        uses: dtinth/patch-generator-action@v1
+        uses: dtinth/patch-generator-action@v1 # This will fail when stage is dirty
       - if: needs.check.outputs.permitted == 'true'
         uses: EndBug/add-and-commit@v7
         with:
