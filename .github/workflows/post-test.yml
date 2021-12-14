@@ -37,5 +37,6 @@ jobs:
       - uses: action/checkout@v2
       - uses: ./
         with:
-          label: has conflict
+          conflict_label_name: "has conflict"
           github_token: ${{ secrets.REPO_PAT }}
+          detect_merge_changes: true
