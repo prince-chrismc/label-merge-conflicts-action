@@ -32,7 +32,7 @@ jobs:
   e2e:
     needs: save
     runs-on: unbuntu-latest
-    if: needs.jobs.save.outputs.committed == 'true'
+    if: needs.save.outputs.committed == 'true'
     steps:
       - uses: action/checkout@v2
       - uses: ./
