@@ -18,10 +18,16 @@ jobs:
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
         sourceRunId: ${{ github.event.workflow_run.id }}
+        
+  debug:
+    needs: source
+    runs-on: ubuntu-latest
+    steps:
+    - run: echo ${{ needs.source.output.event == 'pull_request' }}
 
   save:
     needs: source
-    if: needs.source.output.event == 'pull_request'
+    if: ${{ needs.source.output.event == 'pull_request' }}
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
