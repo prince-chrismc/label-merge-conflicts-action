@@ -9,7 +9,8 @@ jobs:
   source: # `workflow_run`s are triggered from the main branch so we need the source event to get the PR's merge hash
     runs-on: ubuntu-latest
     outputs:
-      ref: ${{ steps.workflow-run-info.outputs.mergeCommitSha }}
+      ref: ${{ steps.workflow-run-info.outputs.targetCommitSha }}
+      head-sha: ${{ steps.workflow-run-info.outputs.sourceHeadSha }}
     steps:
     - uses: potiuk/get-workflow-origin@v1_3
       id: source-run-info
@@ -39,10 +40,10 @@ jobs:
       uses: EndBug/add-and-commit@v7
       with:
         default_author: github_actions
-    - if: steps.add.outputs.committed
+    - #if: steps.add.outputs.committed == 'true'
       uses: LouisBrunner/checks-action@v1.2.0
       with:
-        token: ${{ secrets.GITHUB_TOKEN }}
         name: save
         conclusion: ${{ job.status }}
-        sha: ${{ needs.source.outputs.ref }}
+        sha: ${{ needs.source.outputs.head-sha }}
+        token: ${{ secrets.GITHUB_TOKEN }}
