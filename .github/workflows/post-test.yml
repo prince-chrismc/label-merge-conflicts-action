@@ -40,3 +40,9 @@ jobs:
           conflict_label_name: "has conflict"
           github_token: ${{ secrets.REPO_PAT }}
           detect_merge_changes: true
+      - if: always()
+        uses: LouisBrunner/checks-action@v1.2.0
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          name: e2e
+          conclusion: ${{ job.status }}
