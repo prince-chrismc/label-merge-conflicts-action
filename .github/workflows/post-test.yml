@@ -50,7 +50,7 @@ jobs:
     - uses: action/checkout@v2
       with:
         ref: ${{ needs.source.outputs.ref }}
-    - uses: ./
+    - uses: ./ # Is this opening to a pwn attack :thinking:
       with:
         conflict_label_name: "has conflict"
         github_token: ${{ secrets.REPO_PAT }}
@@ -61,3 +61,4 @@ jobs:
         token: ${{ secrets.GITHUB_TOKEN }}
         name: e2e
         conclusion: ${{ job.status }}
+        sha: ${{ needs.source.outputs.ref }}
