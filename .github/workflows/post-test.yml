@@ -6,12 +6,27 @@ on:
     types: [completed]
 
 jobs:
-  save:
+  source: # `workflow_run`s are triggered from the main branch so we need the source event to get the PR's merge hash
     runs-on: ubuntu-latest
+    outputs:
+      ref: ${{ steps.workflow-run-info.outputs.mergeCommitSha }}
+    steps:
+    - uses: potiuk/get-workflow-origin@v1_3
+      id: source-run-info
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        sourceRunId: ${{ github.event.workflow_run.id }}
+
+  save:
+    needs: source
+    runs-on: ubuntu-latest
+    outputs:
+      committed: ${{ steps.add.outputs.committed }}
     steps:
     - uses: actions/checkout@v2
       with:
         token: ${{ secrets.REPO_PAT }}
+        ref: ${{ needs.source.outputs.ref }}
     - name: Download artifact
       continue-on-error: true
       uses: dawidd6/action-download-artifact@v2
@@ -22,6 +37,28 @@ jobs:
         path: /tmp
     - run: git apply /tmp/fix.diff --index
       continue-on-error: true
-    - uses: EndBug/add-and-commit@v7
+    - id: add
+      uses: EndBug/add-and-commit@v7
       with:
         default_author: github_actions
+
+  e2e:
+    needs: save
+    runs-on: unbuntu-latest
+    if: needs.save.outputs.committed == 'true'
+    steps:
+    - uses: action/checkout@v2
+      with:
+        ref: ${{ needs.source.outputs.ref }}
+    - uses: ./ # Is this opening to a pwn attack :thinking:
+      with:
+        conflict_label_name: "has conflict"
+        github_token: ${{ secrets.REPO_PAT }}
+        detect_merge_changes: true
+    - if: always()
+      uses: LouisBrunner/checks-action@v1.2.0
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        name: e2e
+        conclusion: ${{ job.status }}
+        sha: ${{ needs.source.outputs.ref }}
