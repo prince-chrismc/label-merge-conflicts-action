@@ -24,10 +24,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - run: echo ${{ needs.source.output.event == 'pull_request' }}
+    - run: echo ${{ needs.source.output.event }}
 
   save:
     needs: source
-    if: ${{ needs.source.output.event == 'pull_request' }}
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
