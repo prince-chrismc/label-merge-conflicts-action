@@ -28,9 +28,9 @@ You'll need to manually [create a label][create-label] through GitHub. This can 
 name: Auto Label Conflicts
 on:
   push:
-    branches: [master]
+    branches: [main]
   pull_request:
-    branches: [master]
+    branches: [main]
 
 permissions: # Optional: minimum permission required to add labels or comments
   issues: write
@@ -56,7 +56,7 @@ jobs:
 ## Limitations
 
 1. GitHub does not reliably compute the `mergeable` status which is used by this action to detect merge conflicts.
-    * If `main` changes the mergeable status is unknown until someone (most likely this action) requests it. [GitHub then tries to compute the status with an async job.](https://stackoverflow.com/a/30620973)
+    * If the base branch, such as `main`, changes the mergeable status is unknown until someone (most likely this action) requests it. [GitHub then tries to compute the status with an async job.](https://stackoverflow.com/a/30620973)
     * This is usually quick and simple, but there are no guarantees and GitHub might have issues. You can tweak `max_retries` and `wait_ms` to increase the timeout before giving up on a Pull Request.
 2. GitHub does not run actions on pull requests which have conflicts
     * When there is a conflict it prevents the merge commit from being calculated. [See this thread](https://github.community/t/run-actions-on-pull-requests-with-merge-conflicts/17104).
