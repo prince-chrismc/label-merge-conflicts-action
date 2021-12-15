@@ -9,9 +9,9 @@ jobs:
   source: # `workflow_run`s are triggered from the main branch so we need the source event to get the PR's merge hash
     runs-on: ubuntu-latest
     outputs:
-      event: ${{ steps.workflow-run-info.outputs.sourceEvent }}
-      ref: ${{ steps.workflow-run-info.outputs.targetCommitSha }}
-      head-sha: ${{ steps.workflow-run-info.outputs.sourceHeadSha }}
+      event: ${{ steps.source-run-info.outputs.sourceEvent }}
+      ref: ${{ steps.source-run-info.outputs.targetCommitSha }}
+      head-sha: ${{ steps.source-run-info.outputs.sourceHeadSha }}
     steps:
     - uses: potiuk/get-workflow-origin@v1_3
       id: source-run-info
