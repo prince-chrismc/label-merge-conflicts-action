@@ -10,7 +10,6 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       ref: ${{ steps.workflow-run-info.outputs.targetCommitSha }}
-      head-sha: ${{ steps.workflow-run-info.outputs.sourceHeadSha }}
     steps:
     - uses: potiuk/get-workflow-origin@v1_3
       id: source-run-info
@@ -40,10 +39,23 @@ jobs:
       uses: EndBug/add-and-commit@v7
       with:
         default_author: github_actions
+    - uses: actions/github-script@v5
+      env:
+        HEAD_SHA: ${{ needs.source.outputs.ref }}
+      with:
+        script: |
+          github.rest.checks.createSuite({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            head_sha: process.env.HEAD_SHA,
+          });
     - #if: steps.add.outputs.committed == 'true'
       uses: LouisBrunner/checks-action@v1.2.0
       with:
         name: save
         conclusion: ${{ job.status }}
-        sha: ${{ needs.source.outputs.head-sha }}
+        sha: ${{ needs.source.outputs.ref }}
         token: ${{ secrets.GITHUB_TOKEN }}
+        details_url: https://github.com/${{ github.repository }}/runs/${{ github.run_id }}
+        output: |
+          { "title": "Saving CI changes", "summary": "A git-diff has been applied to ${{ needs.source.outputs.ref }}" }
