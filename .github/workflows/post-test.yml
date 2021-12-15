@@ -23,8 +23,8 @@ jobs:
     needs: source
     runs-on: ubuntu-latest
     steps:
-    - run: echo ${{ needs.source.output.event == 'pull_request' }}
-    - run: echo ${{ needs.source.output.event }}
+    - run: echo ${{ needs.source.outputs.event }}
+    - run: echo ${{ needs.source.outputs.event == 'pull_request' }}
 
   save:
     needs: source
@@ -64,7 +64,7 @@ jobs:
       with:
         name: save
         conclusion: ${{ job.status }}
-        sha: ${{ needs.source.outputs.ref }}
+        sha: ${{ needs.source.outputs.head-sha }}
         token: ${{ secrets.GITHUB_TOKEN }}
         details_url: https://github.com/${{ github.repository }}/runs/${{ github.run_id }}
         output: |
