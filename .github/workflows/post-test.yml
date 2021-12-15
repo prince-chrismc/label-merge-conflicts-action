@@ -20,8 +20,6 @@ jobs:
   save:
     needs: source
     runs-on: ubuntu-latest
-    outputs:
-      committed: ${{ steps.add.outputs.committed }}
     steps:
     - uses: actions/checkout@v2
       with:
@@ -41,24 +39,10 @@ jobs:
       uses: EndBug/add-and-commit@v7
       with:
         default_author: github_actions
-
-  e2e:
-    needs: save
-    runs-on: unbuntu-latest
-    if: needs.save.outputs.committed == 'true'
-    steps:
-    - uses: action/checkout@v2
-      with:
-        ref: ${{ needs.source.outputs.ref }}
-    - uses: ./ # Is this opening to a pwn attack :thinking:
-      with:
-        conflict_label_name: "has conflict"
-        github_token: ${{ secrets.REPO_PAT }}
-        detect_merge_changes: true
-    - if: always()
+    - if: steps.add.outputs.committed
       uses: LouisBrunner/checks-action@v1.2.0
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
-        name: e2e
+        name: save
         conclusion: ${{ job.status }}
         sha: ${{ needs.source.outputs.ref }}
