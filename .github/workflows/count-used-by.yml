@@ -1,0 +1,27 @@
+name: Count Used By
+
+on:
+  schedule:
+    - cron: "0 0 * * *" # Everyday
+  workflow_dispatch: {}
+    
+jobs:
+  used-by:
+    runs-on: ubuntu-latest
+    steps:
+    - id: count
+      uses: prince-chrismc/count-used-by-action@v1
+    - uses: actions/checkout@v2
+    - run: |
+       echo '{
+         "schemaVersion": 1,
+         "label": "Used By",
+         "message": "${{ steps.count.outputs.counted }}",
+         "color": "blue",
+         "namedLogo": "githubactions",
+         "logoColor": "#fff"
+       }' > .github/used-by.json
+    - uses: EndBug/add-and-commit@v8
+      with:
+        default_author: github_actions
+diff --git a/README.md b/README.md
