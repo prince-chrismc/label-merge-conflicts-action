@@ -1,6 +1,9 @@
+name: Update Major Tag
+
 on:
   release:
     types: [published]
+
 jobs:
   tag-major:
     runs-on: ubuntu-latest
