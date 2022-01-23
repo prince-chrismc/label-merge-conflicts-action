@@ -26,6 +26,7 @@ jobs:
       - if: github.event_name == 'pull_request' && needs.check.outputs.permitted == 'true'
         uses: actions/checkout@v2
         with:
+          token: ${{ secrets.REPO_PAT }}
           ref: ${{ github.event.pull_request.head.ref }}
       - uses: actions/cache@v2
         with:
