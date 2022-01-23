@@ -21,7 +21,13 @@ jobs:
     needs: check
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - if: github.event_name == 'push' || needs.check.outputs.permitted == 'false'
+        uses: actions/checkout@v2
+      - if: github.event_name == 'pull_request' && needs.check.outputs.permitted == 'true'
+        uses: actions/checkout@v2
+        with:
+          token: ${{ secrets.REPO_PAT }}
+          ref: ${{ github.event.pull_request.head.ref }}
       - uses: actions/cache@v2
         with:
           path: node_modules
@@ -32,10 +38,10 @@ jobs:
       - if: needs.check.outputs.permitted != 'true'
         uses: dtinth/patch-generator-action@v1 # This will fail when stage is dirty
       - if: needs.check.outputs.permitted == 'true'
-        uses: EndBug/add-and-commit@v7
+        uses: EndBug/add-and-commit@v8
         with:
           default_author: github_actions
-          message: 'auto commit: linting and/or packing changes'
+          message: linting and packing changes for ${{ github.sha }}
 
   e2e: # make sure the action works on a clean machine without building
     needs: check
