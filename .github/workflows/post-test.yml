@@ -46,7 +46,7 @@ jobs:
     - run: git apply /tmp/fix.diff --index
       continue-on-error: true
     - id: add
-      uses: EndBug/add-and-commit@v7
+      uses: EndBug/add-and-commit@v8
       with:
         default_author: github_actions
     - if: steps.add.outputs.committed == 'true'
@@ -55,7 +55,7 @@ jobs:
         name: save
         conclusion: ${{ job.status }}
         sha: ${{ needs.source.outputs.head-sha }}
-        token: ${{ secrets.GITHUB_TOKEN }}
+        token: ${{ secrets.REPO_PAT }}
         details_url: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
         output: |
           { "summary": "A git-diff has been applied to ${{ needs.source.outputs.ref }}" }
