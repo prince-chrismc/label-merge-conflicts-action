@@ -21,7 +21,12 @@ jobs:
     needs: check
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - if: github.event_name == 'push' || needs.check.outputs.permitted == 'false'
+        uses: actions/checkout@v2
+      - if: github.event_name == 'pull_request' && needs.check.outputs.permitted == 'true'
+        uses: actions/checkout@v2
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
       - uses: actions/cache@v2
         with:
           path: node_modules
