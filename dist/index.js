@@ -314,7 +314,7 @@ const getLabels = (octokit, context, labelName) => __awaiter(void 0, void 0, voi
 });
 exports.getLabels = getLabels;
 const addLabelToLabelable = (octokit, { labelId, labelableId }) => __awaiter(void 0, void 0, void 0, function* () {
-    const query = `mutation ($label: String!, $pullRequest: String!) {
+    const query = `mutation ($label: ID!, $pullRequest: ID!) {
     addLabelsToLabelable(input: {labelIds: [$label], labelableId: $pullRequest}) {
       clientMutationId
     }
