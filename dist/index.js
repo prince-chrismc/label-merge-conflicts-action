@@ -426,7 +426,7 @@ function run() {
             core.debug(`applyComment=${applyComment} commentTemplate=${commentTemplate}`);
             // Get the label to use
             const conflictLabel = (0, util_1.findLabelByName)(yield (0, queries_1.getLabels)(octokit, github.context, conflictLabelName), conflictLabelName);
-            if (github.context.eventName === 'pull_request') {
+            if (github.context.eventName.includes('pull_request')) {
                 return yield runOnPullRequest(octokit, github.context, conflictLabel, waitMs, maxRetries, detectMergeChanges, {
                     apply: applyComment,
                     body: commentTemplate

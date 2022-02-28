@@ -33,7 +33,7 @@ export async function run(): Promise<void> {
       conflictLabelName
     )
 
-    if (github.context.eventName === 'pull_request') {
+    if (github.context.eventName.includes('pull_request')) {
       return await runOnPullRequest(octokit, github.context, conflictLabel, waitMs, maxRetries, detectMergeChanges, {
         apply: applyComment,
         body: commentTemplate
