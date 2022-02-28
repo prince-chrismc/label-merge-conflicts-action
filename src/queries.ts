@@ -152,16 +152,6 @@ export const addLabelToLabelable = async (
   return octokit.graphql(query, {label: labelId, pullRequest: labelableId})
 }
 
-export const addCommentToSubject = async (octokit: InstanceType<typeof GitHub>, labelableId: string, body: string) => {
-  const query = `mutation comment($id: ID!, $body: String!) {
-    addComment(input: {subjectId: $id, body: $body}) {
-      clientMutationId
-    }
-  }`
-
-  return octokit.graphql(query, {id: labelableId, body})
-}
-
 export const removeLabelFromLabelable = async (
   octokit: InstanceType<typeof GitHub>,
   {
@@ -172,13 +162,23 @@ export const removeLabelFromLabelable = async (
     labelableId: string
   }
 ) => {
-  const query = `mutation ($label: String!, $pullRequest: String!) {
+  const query = `mutation ($label: ID!, $pullRequest: ID!) {
     removeLabelsFromLabelable(input: {labelIds: [$label], labelableId: $pullRequest}) {
       clientMutationId
     }
   }`
 
   return octokit.graphql(query, {label: labelId, pullRequest: labelableId})
+}
+
+export const addCommentToSubject = async (octokit: InstanceType<typeof GitHub>, labelableId: string, body: string) => {
+  const query = `mutation comment($id: ID!, $body: String!) {
+    addComment(input: {subjectId: $id, body: $body}) {
+      clientMutationId
+    }
+  }`
+
+  return octokit.graphql(query, {id: labelableId, body})
 }
 
 export const getPullRequestChanges = async (
