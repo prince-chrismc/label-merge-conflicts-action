@@ -143,7 +143,7 @@ export const addLabelToLabelable = async (
     labelableId: string
   }
 ) => {
-  const query = `mutation ($label: String!, $pullRequest: String!) {
+  const query = `mutation ($label: ID!, $pullRequest: ID!) {
     addLabelsToLabelable(input: {labelIds: [$label], labelableId: $pullRequest}) {
       clientMutationId
     }
