@@ -48,9 +48,13 @@ jobs:
           max_retries: 5
           wait_ms: 15000
           detect_merge_changes: false # or true to handle as conflicts
-          conflict_comment: ":wave: Hi, @${author},\n\nI detected conflicts against the base branch. You'll want to sync :arrows_counterclockwise: your branch with upstream!"
-          # The `${author}` will be replaced with the username of who ever opened the pull requestion, this can be omitted
+          # The author of the pull request will be tagged. You can use https://docs.github.com/en/actions/learn-github-actions/contexts
+          # to add more information like the branch or enviroment with expressions
           # Ommiting `conflict_comment` will disable commenting, only a label will be applied
+          conflict_comment: |
+            :wave: Hi, @${{ github.author }},
+            
+            I detected conflicts against the base branch. You'll want to sync :arrows_counterclockwise: your branch with upstream!
 ```
 
 ## Limitations
