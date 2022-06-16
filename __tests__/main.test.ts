@@ -1147,10 +1147,7 @@ describe('queries', () => {
             /addLabelsToLabelable.*variables.*MDU6TGFiZWwyNzYwMjE1ODI0.*MDExOlB1bGxSZXF1ZXN0NTc4ODgyNDUw.*/
           )
           .reply(200, {data: {clientMutationId: 'auniqueid'}})
-          .post(
-            '/graphql',
-            /addComment.*variables.*MDExOlB1bGxSZXF1ZXN0NTc4ODgyNDUw.*faker's super awesome comment.*/
-          )
+          .post('/graphql', /addComment.*variables.*MDExOlB1bGxSZXF1ZXN0NTc4ODgyNDUw.*faker's super awesome comment.*/)
           .reply(200, {data: {clientMutationId: 'auniqueid'}})
 
         const pullRequest = makePr('CONFLICTING')
