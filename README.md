@@ -14,7 +14,7 @@ This action _intuitively_ checks open pull request(s) for merge conflicts and ma
 
 > Work by [Geek & Poke: Being A Coder Made Easy](https://geek-and-poke.com/geekandpoke/2010/10/21/being-a-code-made-easy-chapter-1.html) ([CC BY 3.0](https://creativecommons.org/licenses/by/3.0/)) just shorter.
 
-## Add it to your Project
+## Add it to Your Project
 
 ### Create a Label
 
@@ -40,31 +40,39 @@ jobs:
   auto-label:
     runs-on: ubuntu-latest
     steps:
-      - uses: prince-chrismc/label-merge-conflicts-action@v1
+      - uses: prince-chrismc/label-merge-conflicts-action@v2
         with:
           conflict_label_name: "has conflict"
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          # These are optional incase you need to adjust for the limitations described below
-          max_retries: 5
-          wait_ms: 15000
-          detect_merge_changes: false # or true to handle as conflicts
-          # The author of the pull request will be tagged. You can use https://docs.github.com/en/actions/learn-github-actions/contexts
-          # to add more information like the branch or enviroment with expressions
+          github_token: ${{ github.token }}
+          
+          # --- Optional Inputs ---
+          # Comment to add to the Pull Request when adding a label (if there's a label no comment will be added)
+          # You can use https://docs.github.com/en/actions/learn-github-actions/contexts
+          # to add more information like the branch or enviroment with expressions in the comment
           # Ommiting `conflict_comment` will disable commenting, only a label will be applied
           conflict_comment: |
             :wave: Hi, @${{ github.author }},
-            
-            I detected conflicts against the base branch. You'll want to sync :arrows_counterclockwise: your branch with upstream!
+            I detected conflicts against the base branch :speak_no_evil:
+            You'll want to sync :arrows_counterclockwise: your branch with upstream!
+          # Increase conflict sensitivity, see FAQ for more inforamtion
+          detect_merge_changes: false # or `true` to handle as conflicts
+          # These are incase you need to circumvent for the limitations described below
+          max_retries: 5
+          wait_ms: 15000
 ```
 
 ## Limitations
 
 1. GitHub does not reliably compute the `mergeable` status which is used by this action to detect merge conflicts.
-    * If the base branch, such as `main`, changes the mergeable status is unknown until someone (most likely this action) requests it. [GitHub then tries to compute the status with an async job.](https://stackoverflow.com/a/30620973)
-    * This is usually quick and simple, but there are no guarantees and GitHub might have issues. You can tweak `max_retries` and `wait_ms` to increase the timeout before giving up on a Pull Request.
-2. GitHub does not run actions on pull requests which have conflicts
-    * When there is a conflict it prevents the merge commit from being calculated. [See this thread](https://github.community/t/run-actions-on-pull-requests-with-merge-conflicts/17104).
-    * This is required for the [`mergeable`](https://docs.github.com/en/graphql/reference/enums#mergeablestate) as per the [API documentation](https://docs.github.com/en/rest/reference/pulls#get-a-pull-request)
+If the base branch (e.g. `main`) changes then the mergeable status is unknown until someone (like this action) requests it.
+[GitHub then tries to compute the status with an async job.](https://stackoverflow.com/a/30620973). This is usually quick
+and simple, but there are no guarantees and GitHub might have issues. You can tweak `max_retries` and `wait_ms` to increase
+the timeout before giving up on a Pull Request.
+2. GitHub does not run actions on pull requests which have conflicts - which will prevent this action from working.
+When there is a conflict it prevents the merge commit from being calculated.
+[See this thread](https://github.community/t/run-actions-on-pull-requests-with-merge-conflicts/17104) for more details.
+This is required for the [`mergeable`](https://docs.github.com/en/graphql/reference/enums#mergeablestate) as per the 
+[API documentation](https://docs.github.com/en/rest/reference/pulls#get-a-pull-request).
 
 ## FAQ - What are _Merge Changes_?
 
@@ -80,8 +88,8 @@ When [merging a pull request](https://docs.github.com/en/github/collaborating-wi
 
 > ℹ️ _This is a rapidly changing topic_. Feel free to [open an issue](https://github.com/prince-chrismc/label-merge-conflicts-action/issues/new?title=Question:%20Permissions&labels=help%20wanted) if there's any problems.
 
-If a user without write access opens a 'Pull Request' from their fork then GitHub will not be granted adequate permissions to set the labels
-[details here](https://github.blog/changelog/2021-04-20-github-actions-control-permissions-for-github_token/#setting-permissions-in-the-workflow).
+If a user without write access opens a 'Pull Request' from their fork then GitHub will not grant adequate permissions to set the labels
+([detailed here](https://github.blog/changelog/2021-04-20-github-actions-control-permissions-for-github_token/#setting-permissions-in-the-workflow)).
 Hence the _not accessible_ error. Try the following steps:
 
 * using the ([potentially dangerous](https://securitylab.github.com/research/github-actions-preventing-pwn-requests/)) event `pull_request_target`
