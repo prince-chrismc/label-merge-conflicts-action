@@ -25,13 +25,13 @@ jobs:
           github.event_name == 'push' ||
           github.event_name == 'workflow_dispatch' ||
           needs.check.outputs.permitted == 'false'
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       - if: github.event_name == 'pull_request' && needs.check.outputs.permitted == 'true'
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           token: ${{ secrets.REPO_PAT }}
           ref: ${{ github.event.pull_request.head.ref }}
-      - uses: actions/cache@v2
+      - uses: actions/cache@v3
         with:
           path: node_modules
           key: ${{ runner.os }}-${{ hashFiles('**/yarn.lock') }}
@@ -51,7 +51,7 @@ jobs:
     runs-on: ubuntu-latest
     if: needs.check.outputs.permitted == 'true'
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - uses: ./
         with:
           conflict_label_name: "has conflict"
@@ -62,13 +62,13 @@ jobs:
     needs: ci
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/cache@v2
+      - uses: actions/checkout@v3
+      - uses: actions/cache@v3
         with:
           path: node_modules
           key: ${{ runner.os }}-${{ hashFiles('**/yarn.lock') }}
       - run: yarn install
       - run: yarn test --coverage
-      - uses: codecov/codecov-action@v2
+      - uses: codecov/codecov-action@v3
         with:
           directory: coverage/
