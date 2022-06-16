@@ -5,12 +5,19 @@ branding:
   icon: "git-merge"
   color: "red"
 inputs:
-  conflict_label_name:
-    description: "label name used to marked PRs with merge conflicts"
-    required: true
   github_token:
     description: "GitHub token / secret"
     required: true
+  conflict_label_name:
+    description: "label name used to marked PRs with merge conflicts"
+    required: true
+  conflict_comment:
+    description: "the comment to leave on a pull request when adding the conflict label"
+    required: false
+  detect_merge_changes:
+    description: "treat soft changes within the merge commits as conflicts and label accordingly"
+    required: false
+    default: "false"
   max_retries:
     description: "number of times to retry on a failed mergable check"
     required: false
@@ -19,13 +26,6 @@ inputs:
     description: "miliseconds between retries"
     required: false
     default: "5000"
-  detect_merge_changes:
-    description: "treat soft changes within the merge commits as conflicts and label accordingly"
-    required: false
-    default: "false"
-  conflict_comment:
-    description: "the comment to leave on a pull request when adding the conflict label"
-    required: false
 runs:
   using: "node12"
   main: "dist/index.js"

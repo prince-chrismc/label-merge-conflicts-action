@@ -1147,17 +1147,14 @@ describe('queries', () => {
             /addLabelsToLabelable.*variables.*MDU6TGFiZWwyNzYwMjE1ODI0.*MDExOlB1bGxSZXF1ZXN0NTc4ODgyNDUw.*/
           )
           .reply(200, {data: {clientMutationId: 'auniqueid'}})
-          .post(
-            '/graphql',
-            /addComment.*variables.*MDExOlB1bGxSZXF1ZXN0NTc4ODgyNDUw.*justausername's super awesome comment.*/
-          )
+          .post('/graphql', /addComment.*variables.*MDExOlB1bGxSZXF1ZXN0NTc4ODgyNDUw.*faker's super awesome comment.*/)
           .reply(200, {data: {clientMutationId: 'auniqueid'}})
 
         const pullRequest = makePr('CONFLICTING')
         const octokit = github.getOctokit('justafaketoken')
         const added = updatePullRequestConflictLabel(octokit, github.context, pullRequest, expectedLabel, false, {
           apply: true,
-          body: "${author}'s super awesome comment"
+          body: "faker's super awesome comment"
         })
 
         await expect(added).resolves.toBe(undefined)
