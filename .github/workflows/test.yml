@@ -57,10 +57,6 @@ jobs:
           conflict_label_name: "has conflict"
           github_token: ${{ secrets.REPO_PAT }}
           detect_merge_changes: true
-          conflict_comment: |
-            :wave: Hi, @${{ github.actor }},
-            
-            I detected conflicts against the base branch. You'll want to sync :arrows_counterclockwise: your branch with upstream!
 
   coverage:
     needs: ci
