@@ -31,7 +31,7 @@ jobs:
     if: needs.source.outputs.event == 'pull_request'
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
       with:
         token: ${{ secrets.REPO_PAT }}
         ref: ${{ needs.source.outputs.ref }}
