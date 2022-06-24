@@ -6,16 +6,16 @@ branding:
   color: "red"
 inputs:
   github_token:
-    description: "GitHub token / secret"
+    description: "GitHub token or secret personal access token"
     required: true
   conflict_label_name:
-    description: "label name used to marked PRs with merge conflicts"
+    description: "The name of the label which should be used to marked PRs with conflicts"
     required: true
   conflict_comment:
-    description: "the comment to leave on a pull request when adding the conflict label"
+    description: "When present, a comment will be added when adding the conflict label"
     required: false
   detect_merge_changes:
-    description: "treat soft changes within the merge commits as conflicts and label accordingly"
+    description: "check that the merge commit is an exact match to the branch and report changes as conflicts"
     required: false
     default: "false"
   max_retries:

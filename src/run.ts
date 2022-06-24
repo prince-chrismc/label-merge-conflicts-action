@@ -23,9 +23,9 @@ export async function run(): Promise<void> {
     const detectMergeChanges = core.getInput('detect_merge_changes') === 'true'
     core.debug(`detectMergeChanges=${detectMergeChanges}`)
 
-    const commentBody = core.getInput('conflict_comment')
-    const applyComment = (commentBody && commentBody !== '') as boolean
-    core.debug(`applyComment=${applyComment} commentBody=${commentBody}`)
+    const commentTemplate = core.getInput('conflict_comment')
+    const applyComment = (commentTemplate && commentTemplate !== '') as boolean
+    core.debug(`applyComment=${applyComment} commentTemplate=${commentTemplate}`)
 
     // Get the label to use
     const conflictLabel = findLabelByName(
@@ -36,13 +36,13 @@ export async function run(): Promise<void> {
     if (github.context.eventName.includes('pull_request')) {
       return await runOnPullRequest(octokit, github.context, conflictLabel, waitMs, maxRetries, detectMergeChanges, {
         apply: applyComment,
-        body: commentBody
+        body: commentTemplate
       })
     }
 
     await runOnAll(octokit, github.context, conflictLabel, waitMs, maxRetries, detectMergeChanges, {
       apply: applyComment,
-      body: commentBody
+      body: commentTemplate
     })
   } catch (error) {
     core.setFailed(error as Error)
