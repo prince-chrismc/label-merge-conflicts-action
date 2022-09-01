@@ -50,7 +50,7 @@ jobs:
       with:
         default_author: github_actions
     - if: steps.add.outputs.committed == 'true'
-      uses: LouisBrunner/checks-action@v1.2.0
+      uses: LouisBrunner/checks-action@v1.3.1
       with:
         name: save
         conclusion: ${{ job.status }}
