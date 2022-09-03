@@ -18,30 +18,39 @@ jobs:
           permission: write
 
   ci:
-    needs: check
     runs-on: ubuntu-latest
     steps:
-      - if: |
-          github.event_name == 'push' ||
-          github.event_name == 'workflow_dispatch' ||
-          needs.check.outputs.permitted == 'false'
-        uses: actions/checkout@v3
-      - if: github.event_name == 'pull_request' && needs.check.outputs.permitted == 'true'
-        uses: actions/checkout@v3
-        with:
-          token: ${{ secrets.REPO_PAT }}
-          ref: ${{ github.event.pull_request.head.ref }}
+      - uses: actions/checkout@v3
       - uses: actions/cache@v3
         with:
           path: node_modules
           key: ${{ runner.os }}-${{ hashFiles('**/yarn.lock') }}
       - run: yarn install
       - run: yarn all
+
       - run: git add --update
-      - if: needs.check.outputs.permitted != 'true'
-        uses: dtinth/patch-generator-action@v1 # This will fail when stage is dirty
-      - if: needs.check.outputs.permitted == 'true'
-        uses: EndBug/add-and-commit@v9
+      - uses: dtinth/patch-generator-action@v1 # This will fail when stage is dirty
+
+  commit-linting:
+    needs: [check, ci]
+    if: always() && needs.jobs.ci.outcome != 'success' && needs.check.outputs.permitted == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+        uses: actions/checkout@v3
+      - if: github.event_name == 'pull_request'
+        uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.REPO_PAT }}
+          ref: ${{ github.event.pull_request.head.ref }}
+
+      - uses: actions/download-artifact@v3
+        with:
+          name: git-patch
+          path: /tmp
+      - run: git apply /tmp/fix.diff
+
+      - uses: EndBug/add-and-commit@v9
         with:
           default_author: github_actions
           message: linting and packing changes for ${{ github.sha }}
