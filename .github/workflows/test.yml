@@ -33,7 +33,7 @@ jobs:
 
   commit-linting:
     needs: [check, ci]
-    if: always() && needs.jobs.ci.outcome != 'success' && needs.check.outputs.permitted == 'true'
+    if: always() && needs.jobs.result != 'success' && needs.check.outputs.permitted == 'true'
     runs-on: ubuntu-latest
     steps:
       - if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
