@@ -121,7 +121,7 @@ describe('queries', () => {
     jest.spyOn(core, 'error').mockImplementation(jest.fn())
     jest.spyOn(core, 'warning').mockImplementation(jest.fn())
     jest.spyOn(core, 'info').mockImplementation(jest.fn())
-    jest.spyOn(core, 'debug').mockImplementation(jest.fn())
+    // jest.spyOn(core, 'debug').mockImplementation(jest.fn())
     jest.spyOn(core, 'startGroup').mockImplementation(jest.fn())
     jest.spyOn(core, 'endGroup').mockImplementation(jest.fn())
     jest.spyOn(core, 'setFailed').mockImplementation(jest.fn())
@@ -1733,6 +1733,7 @@ describe('queries', () => {
 
       inputs['conflict_label_name'] = 'expected_label'
       inputs['github_token'] = 'justafaketoken'
+      inputs['comment_template'] = ''
       // inputs['max_retries'] = '1'
       inputs['wait_ms'] = '25'
 
@@ -1740,6 +1741,7 @@ describe('queries', () => {
 
       await run()
 
+      expect(scope.isDone())
       expect(mock).not.toBeCalled()
     })
     test('push event works with comment', async () => {
