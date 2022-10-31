@@ -121,7 +121,7 @@ describe('queries', () => {
     jest.spyOn(core, 'error').mockImplementation(jest.fn())
     jest.spyOn(core, 'warning').mockImplementation(jest.fn())
     jest.spyOn(core, 'info').mockImplementation(jest.fn())
-    // jest.spyOn(core, 'debug').mockImplementation(jest.fn())
+    jest.spyOn(core, 'debug').mockImplementation(jest.fn())
     jest.spyOn(core, 'startGroup').mockImplementation(jest.fn())
     jest.spyOn(core, 'endGroup').mockImplementation(jest.fn())
     jest.spyOn(core, 'setFailed').mockImplementation(jest.fn())
