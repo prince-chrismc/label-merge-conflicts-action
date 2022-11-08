@@ -20,7 +20,7 @@ This action _intuitively_ checks open pull request(s) for merge conflicts and ma
 
 ### Create a Label
 
-You'll need to manually [create a label][create-label] through GitHub. This can be done through the UI if you so with.
+You'll need to decide on a label and manually [create it][create-label] if it does not already exist.
 
 [create-label]: https://docs.github.com/en/issues/using-labels-and-milestones-to-track-work/managing-labels#creating-a-label
 
@@ -38,7 +38,7 @@ jobs:
   auto-label:
     runs-on: ubuntu-latest
     steps:
-      - uses: prince-chrismc/label-merge-conflicts-action@v2
+      - uses: prince-chrismc/label-merge-conflicts-action@v3
         with:
           conflict_label_name: "has conflict"
           github_token: ${{ github.token }}
@@ -46,7 +46,7 @@ jobs:
           # --- Optional Inputs ---
           # To make sure the merge commit exactly matches the branch
           detect_merge_changes: false # or true to handle as conflicts
-          # Omitting `conflict_comment` will disable commenting, only the label will be applied
+          # By default a comment will be left, adding `conflict_comment: ''` will disable comments
           # The optional `${author}` will be replaced with the username of the pull request
           conflict_comment: |
             :wave: Hi, @${author},
