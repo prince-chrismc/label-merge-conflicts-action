@@ -38,7 +38,7 @@ jobs:
   auto-label:
     runs-on: ubuntu-latest
     steps:
-      - uses: prince-chrismc/label-merge-conflicts-action@v3
+      - uses: goonstation/label-merge-conflicts-action@v3
         with:
           conflict_label_name: "has conflict"
           github_token: ${{ github.token }}
