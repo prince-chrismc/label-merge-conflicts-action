@@ -1,6 +1,6 @@
 name: "Label Merge Conflicts"
 description: 'Label pull requests with merge conflicts and subtle git-blob merge changes beyond those flagged by GitHub'
-author: "prince-chrismc"
+author: "goonstation"
 branding:
   icon: "git-merge"
   color: "red"
@@ -27,11 +27,11 @@ inputs:
   max_retries:
     description: "number of times to retry on a failed mergable check"
     required: false
-    default: "5"
+    default: "8"
   wait_ms:
     description: "milliseconds between retries"
     required: false
-    default: "5000"
+    default: "9000"
 runs:
   using: "node16"
   main: "dist/index.js"
