@@ -1,7 +1,6 @@
 # Label Pull Requests with Merge Conflicts Automatically
 
 [![MIT](https://img.shields.io/github/license/prince-chrismc/label-merge-conflicts-action)](https://github.com/prince-chrismc/label-merge-conflicts-action/blob/main/LICENSE)
-[![codecov](https://img.shields.io/codecov/c/github/prince-chrismc/label-merge-conflicts-action)](https://codecov.io/gh/prince-chrismc/label-merge-conflicts-action)
 
 ## Purpose
 
@@ -10,11 +9,6 @@ This action _intuitively_ checks open pull request(s) for merge conflicts and ma
 
 [label-guide]: https://guides.github.com/features/issues/#filtering
 [pr-comments]: https://docs.github.com/en/github/collaborating-with-pull-requests/reviewing-changes-in-pull-requests/commenting-on-a-pull-request#about-pull-request-comments
-
-![comic](https://github.com/prince-chrismc/label-merge-conflicts-action/blob/main/.github/label-merge-conflicts.png?raw=true)
-
-> Work by [Geek & Poke: Being A Coder Made Easy](https://geek-and-poke.com/geekandpoke/2010/10/21/being-a-code-made-easy-chapter-1.html)
-> ([CC BY 3.0](https://creativecommons.org/licenses/by/3.0/)) just shorter.
 
 ## Add it to Your Project
 
