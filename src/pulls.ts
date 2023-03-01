@@ -33,7 +33,7 @@ export async function gatherPullRequest(
   } while (uknownStatus && maxRetries >= tries)
 
   if (uknownStatus) {
-    throw new Error(`Could not determine mergeable status for: #${prEvent.number}`)
+    core.warn(`Could not determine mergeable status for: #${prEvent.number}`);
   }
 
   return pullRequest
@@ -64,7 +64,7 @@ export async function gatherPullRequests(
   // after $maxRetries we give up, probably GitHub had some issues
   if (pullrequestsWithoutMergeStatus.length > 0) {
     // Only set failed so that we can proccess the rest of the pull requests the do have mergeable calculated
-    core.setFailed(
+    core.warn(
       `Could not determine mergeable status for: #${pullrequestsWithoutMergeStatus
         .map(pr => {
           return pr.node.number
