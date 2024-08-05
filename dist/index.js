@@ -39,7 +39,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.updatePullRequestConflictLabel = void 0;
+exports.updatePullRequestConflictLabel = updatePullRequestConflictLabel;
 const core = __importStar(__nccwpck_require__(2186));
 const pulls_1 = __nccwpck_require__(1316);
 const queries_1 = __nccwpck_require__(775);
@@ -58,8 +58,8 @@ function applyLabelable(octokit, labelable, hasLabel, pullRequestNumber, comment
     });
 }
 function updatePullRequestConflictLabel(octokit, context, pullRequest, conflictLabel, detectMergeChanges, comment) {
-    var _a, _b;
     return __awaiter(this, void 0, void 0, function* () {
+        var _a, _b;
         const hasLabel = (0, util_1.isAlreadyLabeled)(pullRequest, conflictLabel);
         const labelable = { labelId: conflictLabel.node.id, labelableId: pullRequest.id };
         const writeBody = (author) => { var _a; return `${(_a = comment === null || comment === void 0 ? void 0 : comment.body) === null || _a === void 0 ? void 0 : _a.replace('${author}', author)}`; };
@@ -87,7 +87,6 @@ function updatePullRequestConflictLabel(octokit, context, pullRequest, conflictL
         }
     });
 }
-exports.updatePullRequestConflictLabel = updatePullRequestConflictLabel;
 
 
 /***/ }),
@@ -130,7 +129,9 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.checkPullRequestForMergeChanges = exports.gatherPullRequests = exports.gatherPullRequest = void 0;
+exports.checkPullRequestForMergeChanges = void 0;
+exports.gatherPullRequest = gatherPullRequest;
+exports.gatherPullRequests = gatherPullRequests;
 const core = __importStar(__nccwpck_require__(2186));
 const wait_1 = __nccwpck_require__(5817);
 const queries_1 = __nccwpck_require__(775);
@@ -156,7 +157,6 @@ function gatherPullRequest(octokit, context, prEvent, waitMs, maxRetries) {
         return pullRequest;
     });
 }
-exports.gatherPullRequest = gatherPullRequest;
 function gatherPullRequests(octokit, context, waitMs, maxRetries) {
     return __awaiter(this, void 0, void 0, function* () {
         let tries = 0;
@@ -184,7 +184,6 @@ function gatherPullRequests(octokit, context, waitMs, maxRetries) {
         return pullRequests;
     });
 }
-exports.gatherPullRequests = gatherPullRequests;
 const checkPullRequestForMergeChanges = (octokit, context, pullRequest) => __awaiter(void 0, void 0, void 0, function* () {
     const prChangedFiles = yield (0, queries_1.getPullRequestChanges)(octokit, context, pullRequest.number);
     const mergeChangedFiles = yield (0, queries_1.getCommitChanges)(octokit, context, pullRequest.potentialMergeCommit.oid);
@@ -314,7 +313,7 @@ const getLabels = (octokit, context, labelName) => __awaiter(void 0, void 0, voi
     return octokit.graphql(query, Object.assign(Object.assign({}, context.repo), { labelName }));
 });
 exports.getLabels = getLabels;
-const addLabelToLabelable = (octokit, { labelId, labelableId }) => __awaiter(void 0, void 0, void 0, function* () {
+const addLabelToLabelable = (octokit_1, _a) => __awaiter(void 0, [octokit_1, _a], void 0, function* (octokit, { labelId, labelableId }) {
     const query = `mutation ($label: ID!, $pullRequest: ID!) {
     addLabelsToLabelable(input: {labelIds: [$label], labelableId: $pullRequest}) {
       clientMutationId
@@ -323,7 +322,7 @@ const addLabelToLabelable = (octokit, { labelId, labelableId }) => __awaiter(voi
     return octokit.graphql(query, { label: labelId, pullRequest: labelableId });
 });
 exports.addLabelToLabelable = addLabelToLabelable;
-const removeLabelFromLabelable = (octokit, { labelId, labelableId }) => __awaiter(void 0, void 0, void 0, function* () {
+const removeLabelFromLabelable = (octokit_1, _a) => __awaiter(void 0, [octokit_1, _a], void 0, function* (octokit, { labelId, labelableId }) {
     const query = `mutation ($label: ID!, $pullRequest: ID!) {
     removeLabelsFromLabelable(input: {labelIds: [$label], labelableId: $pullRequest}) {
       clientMutationId
@@ -408,7 +407,9 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.runOnAll = exports.runOnPullRequest = exports.run = void 0;
+exports.run = run;
+exports.runOnPullRequest = runOnPullRequest;
+exports.runOnAll = runOnAll;
 const core = __importStar(__nccwpck_require__(2186));
 const github = __importStar(__nccwpck_require__(5438));
 const queries_1 = __nccwpck_require__(775);
@@ -447,7 +448,6 @@ function run() {
         }
     });
 }
-exports.run = run;
 function runOnPullRequest(octokit, context, conflictLabel, waitMs, maxRetries, detectMergeChanges, comment) {
     return __awaiter(this, void 0, void 0, function* () {
         const prEvent = context.payload;
@@ -459,7 +459,6 @@ function runOnPullRequest(octokit, context, conflictLabel, waitMs, maxRetries, d
         core.endGroup();
     });
 }
-exports.runOnPullRequest = runOnPullRequest;
 function runOnAll(octokit, context, conflictLabel, waitMs, maxRetries, detectMergeChanges, comment) {
     return __awaiter(this, void 0, void 0, function* () {
         core.startGroup('🔎 Gather data for all Pull Requests');
@@ -472,7 +471,6 @@ function runOnAll(octokit, context, conflictLabel, waitMs, maxRetries, detectMer
         core.endGroup();
     });
 }
-exports.runOnAll = runOnAll;
 
 
 /***/ }),
@@ -483,19 +481,19 @@ exports.runOnAll = runOnAll;
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.findLabelByName = exports.isAlreadyLabeled = exports.getPullrequestsWithoutMergeStatus = void 0;
+exports.getPullrequestsWithoutMergeStatus = getPullrequestsWithoutMergeStatus;
+exports.isAlreadyLabeled = isAlreadyLabeled;
+exports.findLabelByName = findLabelByName;
 function getPullrequestsWithoutMergeStatus(pullrequests) {
     return pullrequests.filter((pullrequest) => {
         return pullrequest.node.mergeable === 'UNKNOWN';
     });
 }
-exports.getPullrequestsWithoutMergeStatus = getPullrequestsWithoutMergeStatus;
 function isAlreadyLabeled(pullrequest, label) {
     return (pullrequest.labels.edges.find((l) => {
         return l.node.id === label.node.id;
     }) !== undefined);
 }
-exports.isAlreadyLabeled = isAlreadyLabeled;
 function findLabelByName(labelData, labelName) {
     for (const label of labelData.repository.labels.edges) {
         if (label.node.name === labelName) {
@@ -504,7 +502,6 @@ function findLabelByName(labelData, labelName) {
     }
     throw new Error(`The label "${labelName}" was not found in your repository!`);
 }
-exports.findLabelByName = findLabelByName;
 
 
 /***/ }),
@@ -524,7 +521,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.wait = void 0;
+exports.wait = wait;
 function wait(milliseconds) {
     return __awaiter(this, void 0, void 0, function* () {
         return new Promise(resolve => {
@@ -535,7 +532,6 @@ function wait(milliseconds) {
         });
     });
 }
-exports.wait = wait;
 
 
 /***/ }),
