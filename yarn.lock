@@ -987,10 +987,10 @@
   dependencies:
     "@sinonjs/commons" "^1.7.0"
 
-"@stylistic/eslint-plugin-ts@^2.10.0":
-  version "2.10.0"
-  resolved "https://registry.yarnpkg.com/@stylistic/eslint-plugin-ts/-/eslint-plugin-ts-2.10.0.tgz#65b0120f7a690a40c378e8be9503fae4358b82e3"
-  integrity sha512-/pydlXkvbvn0MUrXzxfLElne/wr5Mb5fC+inncpBUB2nvSUdSjiNDBJC0ehbg0Z6U3FD2XNotOIQV9srHbP3nQ==
+"@stylistic/eslint-plugin-ts@^2.10.1":
+  version "2.10.1"
+  resolved "https://registry.yarnpkg.com/@stylistic/eslint-plugin-ts/-/eslint-plugin-ts-2.10.1.tgz#921ccc284c898de73a59eb651ec84e5eb5227843"
+  integrity sha512-XmXcixLPYfW0Z4Nf2ChnQ7CnfALNy/5gwNh22POiy64xreVYtiag4+yxN2SBEalEfoOAwDnqwDKam7e7XeoKTA==
   dependencies:
     "@typescript-eslint/utils" "^8.12.2"
     eslint-visitor-keys "^4.2.0"
