@@ -33,7 +33,7 @@
     "@octokit/webhooks-definitions": "^3.67.3"
   },
   "devDependencies": {
-    "@stylistic/eslint-plugin-ts": "^2.12.1",
+    "@stylistic/eslint-plugin-ts": "^2.13.0",
     "@types/jest": "^28.1.8",
     "@types/node": "^22.10.5",
     "@typescript-eslint/parser": "^8.19.1",
