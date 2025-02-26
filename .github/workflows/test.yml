@@ -29,7 +29,7 @@ jobs:
       - run: yarn all
 
       - run: git add --update
-      - uses: Thalhammer/patch-generator-action@v2 # This will fail when stage is dirty
+      - uses: Thalhammer/patch-generator-action@v3 # This will fail when stage is dirty
 
   commit-linting:
     needs: [check, ci]
