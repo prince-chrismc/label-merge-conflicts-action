@@ -5,6 +5,11 @@ on:
     branches: [ main ]
   workflow_dispatch: {}
 
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
 jobs:
   check:
     runs-on: ubuntu-latest
@@ -41,7 +46,7 @@ jobs:
       - if: github.event_name == 'pull_request'
         uses: actions/checkout@v7
         with:
-          token: ${{ secrets.REPO_PAT }}
+          token: ${{ github.token }}
           ref: ${{ github.event.pull_request.head.ref }}
 
       - uses: actions/download-artifact@v8
@@ -65,7 +70,7 @@ jobs:
         with:
           conflict_comment: "" # No need to leave myself comments
           conflict_label_name: "has conflict"
-          github_token: ${{ secrets.REPO_PAT }}
+          github_token: ${{ github.token }}
           detect_merge_changes: true
 
   coverage:
