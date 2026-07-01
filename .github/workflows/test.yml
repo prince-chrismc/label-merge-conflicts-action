@@ -24,9 +24,9 @@ jobs:
       - uses: actions/cache@v6
         with:
           path: node_modules
-          key: ${{ runner.os }}-${{ hashFiles('**/yarn.lock') }}
-      - run: yarn install
-      - run: yarn all
+          key: ${{ runner.os }}-${{ hashFiles('**/package-lock.json') }}
+      - run: npm ci
+      - run: npm run all
 
       - run: git add --update
       - uses: Thalhammer/patch-generator-action@v3 # This will fail when stage is dirty
@@ -76,9 +76,9 @@ jobs:
       - uses: actions/cache@v6
         with:
           path: node_modules
-          key: ${{ runner.os }}-${{ hashFiles('**/yarn.lock') }}
-      - run: yarn install
-      - run: yarn test --coverage
+          key: ${{ runner.os }}-${{ hashFiles('**/package-lock.json') }}
+      - run: npm ci
+      - run: npm test -- --coverage
       - uses: codecov/codecov-action@v7
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
