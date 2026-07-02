@@ -25,7 +25,7 @@ inputs:
     required: false
     default: "false"
   max_retries:
-    description: "number of times to retry on a failed mergable check"
+    description: "number of times to retry on a failed mergeable check"
     required: false
     default: "5"
   wait_ms:
@@ -33,5 +33,5 @@ inputs:
     required: false
     default: "5000"
 runs:
-  using: "node16"
+  using: "node24"
   main: "dist/index.js"
