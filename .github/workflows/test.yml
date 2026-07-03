@@ -18,7 +18,7 @@ jobs:
     steps:
       - id: check
         continue-on-error: true
-        uses: prince-chrismc/check-actor-permissions-action@v3
+        uses: prince-chrismc/check-actor-permissions-action@v4
         with:
           permission: write
 
