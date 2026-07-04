@@ -53,6 +53,6 @@ export interface IGitHubRepoPullRequests {
 }
 
 export interface IGitHubFileChange {
-  sha: string
+  sha: string | null
   filename: string
 }
