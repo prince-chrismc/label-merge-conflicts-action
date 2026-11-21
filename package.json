@@ -1,20 +1,17 @@
 {
   "name": "label-merge-conflicts-action",
-  "version": "1.1.0",
-  "private": true,
   "description": "GitHub Action to automatically label PRs with merge conflicts",
-  "main": "lib/main.js",
-  "scripts": {
-    "build": "tsc",
-    "format": "prettier --write **/*.ts",
-    "lint": "eslint --fix src/**/*.ts",
-    "package": "ncc build --source-map --license licenses.txt",
-    "test": "jest",
-    "all": "npm run format && npm run lint && npm run test && npm run build && npm run package"
-  },
+  "version": "4.0.0",
+  "author": "Christopher McArthur <prince.chrismc@gmail.com>",
+  "type": "module",
+  "private": true,
+  "homepage": "https://github.com/prince-chrismc/label-merge-conflicts#readme",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/prince-chrismc/label-merge-conflicts-action.git"
+  },
+  "bugs": {
+    "url": "https://github.com/prince-chrismc/label-merge-conflicts-action/issues"
   },
   "keywords": [
     "actions",
@@ -25,28 +22,66 @@
     "actions",
     "label"
   ],
-  "author": "prince-chrismc",
+  "exports": {
+    ".": "./dist/index.js"
+  },
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "scripts": {
+    "bundle": "npm run format:write && npm run package",
+    "format:write": "npx prettier --write .",
+    "format:check": "npx prettier --check .",
+    "lint": "eslint --fix src/**/*.ts && eslint --fix __tests__/**/*.ts",
+    "local-action": "npx @github/local-action . src/main.ts .env",
+    "package": "npx rimraf ./dist && npx rollup --config rollup.config.ts --configPlugin @rollup/plugin-typescript",
+    "test": "NODE_NO_WARNINGS=1 NODE_OPTIONS=--experimental-vm-modules npx jest",
+    "all": "npm run format:write && npm run lint && npm run test && npm run package"
+  },
   "license": "MIT",
   "dependencies": {
-    "@actions/core": "^1.11.1",
-    "@actions/github": "^5.1.1",
+    "@actions/core": "^3.0.1",
+    "@actions/github": "^9.1.1",
     "@octokit/webhooks-definitions": "^3.67.3"
   },
   "devDependencies": {
-    "@stylistic/eslint-plugin-ts": "^3.1.0",
-    "@types/jest": "^28.1.8",
-    "@types/node": "^24.0.4",
-    "@typescript-eslint/parser": "^8.62.1",
-    "@vercel/ncc": "^0.38.3",
-    "eslint": "^8.57.1",
-    "eslint-plugin-github": "^5.1.5",
-    "eslint-plugin-jest": "^29.15.1",
-    "jest": "^28.1.3",
-    "jest-circus": "^30.2.0",
-    "js-yaml": "^5.2.2",
-    "nock": "^14.0.16",
-    "prettier": "3.8.4",
-    "ts-jest": "^28.0.8",
-    "typescript": "^5.8.3"
+    "@eslint/compat": "^2.1.1",
+    "@eslint/eslintrc": "^3.3.7",
+    "@eslint/js": "^9.39.5",
+    "@github/local-action": "^7.0.1",
+    "@jest/globals": "^30.5.2",
+    "@rollup/plugin-commonjs": "^29.0.3",
+    "@rollup/plugin-node-resolve": "^16.0.3",
+    "@rollup/plugin-typescript": "^12.3.1",
+    "@stylistic/eslint-plugin": "^5.10.0",
+    "@types/jest": "^30.0.0",
+    "@types/node": "^26.6.6",
+    "@typescript-eslint/eslint-plugin": "^8.73.0",
+    "@typescript-eslint/parser": "^8.73.0",
+    "eslint": "^9.39.5",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-import-resolver-typescript": "^4.4.5",
+    "eslint-plugin-github": "^6.1.2",
+    "eslint-plugin-import": "^2.32.0",
+    "eslint-plugin-jest": "^29.17.1",
+    "eslint-plugin-prettier": "^5.5.7",
+    "globals": "^17.14.0",
+    "jest": "^30.5.2",
+    "nock": "^15.0.6",
+    "prettier": "^3.10.1",
+    "prettier-plugin-ignored": "^1.0.0",
+    "rollup": "^4.68.8",
+    "ts-jest": "^29.4.15",
+    "ts-jest-resolver": "^2.0.1",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.73.0"
+  },
+  "optionalDependencies": {
+    "@rollup/rollup-linux-x64-gnu": "*"
+  },
+  "allowScripts": {
+    "@parcel/watcher@2.6.0": true,
+    "esbuild@0.28.2": true,
+    "fsevents@2.3.3": true
   }
 }

@@ -1,5 +1,4 @@
-import {Context} from '@actions/github/lib/context'
-import {GitHub} from '@actions/github/lib/utils'
+import { Context, GitHub } from './github.js'
 import {
   IGitHubPRNode,
   IGitHubRepoLabels,
@@ -7,10 +6,10 @@ import {
   IGitHubFileChange,
   IGitHubRepoPullRequest,
   IGitHubPullRequest
-} from './interfaces'
+} from './interfaces.js'
 
 const getPullRequestPages = async (
-  octokit: InstanceType<typeof GitHub>,
+  octokit: GitHub,
   context: Context,
   cursor?: string
 ): Promise<IGitHubRepoPullRequests> => {
@@ -54,7 +53,7 @@ const getPullRequestPages = async (
 
 // fetch all PRs
 export const getPullRequests = async (
-  octokit: InstanceType<typeof GitHub>,
+  octokit: GitHub,
   context: Context
 ): Promise<IGitHubPRNode[]> => {
   let pullrequests: IGitHubPRNode[] = []
@@ -64,7 +63,9 @@ export const getPullRequests = async (
   do {
     const pullrequestData = await getPullRequestPages(octokit, context, cursor)
 
-    pullrequests = pullrequests.concat(pullrequestData.repository.pullRequests.edges)
+    pullrequests = pullrequests.concat(
+      pullrequestData.repository.pullRequests.edges
+    )
     cursor = pullrequestData.repository.pullRequests.pageInfo.endCursor
     hasNextPage = pullrequestData.repository.pullRequests.pageInfo.hasNextPage
   } while (hasNextPage)
@@ -73,7 +74,7 @@ export const getPullRequests = async (
 }
 
 export const getPullRequest = async (
-  octokit: InstanceType<typeof GitHub>,
+  octokit: GitHub,
   context: Context,
   number: number
 ): Promise<IGitHubPullRequest> => {
@@ -110,7 +111,7 @@ export const getPullRequest = async (
 }
 
 export const getLabels = async (
-  octokit: InstanceType<typeof GitHub>,
+  octokit: GitHub,
   context: Context,
   labelName: string
 ): Promise<IGitHubRepoLabels> => {
@@ -134,7 +135,7 @@ export const getLabels = async (
 }
 
 export const addLabelToLabelable = async (
-  octokit: InstanceType<typeof GitHub>,
+  octokit: GitHub,
   {
     labelId,
     labelableId
@@ -149,11 +150,11 @@ export const addLabelToLabelable = async (
     }
   }`
 
-  return octokit.graphql(query, {label: labelId, pullRequest: labelableId})
+  return octokit.graphql(query, { label: labelId, pullRequest: labelableId })
 }
 
 export const removeLabelFromLabelable = async (
-  octokit: InstanceType<typeof GitHub>,
+  octokit: GitHub,
   {
     labelId,
     labelableId
@@ -168,27 +169,31 @@ export const removeLabelFromLabelable = async (
     }
   }`
 
-  return octokit.graphql(query, {label: labelId, pullRequest: labelableId})
+  return octokit.graphql(query, { label: labelId, pullRequest: labelableId })
 }
 
-export const addCommentToSubject = async (octokit: InstanceType<typeof GitHub>, labelableId: string, body: string) => {
+export const addCommentToSubject = async (
+  octokit: GitHub,
+  labelableId: string,
+  body: string
+) => {
   const query = `mutation comment($id: ID!, $body: String!) {
     addComment(input: {subjectId: $id, body: $body}) {
       clientMutationId
     }
   }`
 
-  return octokit.graphql(query, {id: labelableId, body})
+  return octokit.graphql(query, { id: labelableId, body })
 }
 
 export const getPullRequestChanges = async (
-  octokit: InstanceType<typeof GitHub>,
+  octokit: GitHub,
   context: Context,
   pullRequestnumber: number
 ): Promise<IGitHubFileChange[]> => {
   const head = await octokit.rest.pulls.listFiles({
     ...context.repo,
-    pull_number: pullRequestnumber, // eslint-disable-line camelcase
+    pull_number: pullRequestnumber,
     /**
      * This is correct the different default values which on larger pull requests is an issue.
      * There is no pagination support.
@@ -199,14 +204,14 @@ export const getPullRequestChanges = async (
      * https://docs.github.com/en/rest/reference/repos#get-a-commit
      * > If there are more than 300 files in the commit diff, the response will include pagination link headers for the remaining files, up to a limit of 3000 files.
      */
-    per_page: 300 // eslint-disable-line camelcase
+    per_page: 300
   })
 
   return head.data
 }
 
 export const getCommitChanges = async (
-  octokit: InstanceType<typeof GitHub>,
+  octokit: GitHub,
   context: Context,
   sha: string
 ): Promise<IGitHubFileChange[]> => {

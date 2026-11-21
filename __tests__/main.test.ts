@@ -1,11 +1,52 @@
-import * as core from '@actions/core'
-import * as github from '@actions/github'
+import { context, getOctokit } from '@actions/github'
 import nock from 'nock'
 
-import {wait} from '../src/wait'
-import {IGitHubRepoLabels, IGitHubPRNode, IGitHubLabelNode, IGitHubPullRequest} from '../src/interfaces'
-import {findLabelByName, isAlreadyLabeled} from '../src/util'
 import {
+  expect,
+  test,
+  describe,
+  beforeAll,
+  beforeEach,
+  afterAll,
+  jest
+} from '@jest/globals'
+
+import { wait } from '../src/wait'
+import {
+  IGitHubRepoLabels,
+  IGitHubPRNode,
+  IGitHubLabelNode,
+  IGitHubPullRequest
+} from '../src/interfaces'
+import { findLabelByName, isAlreadyLabeled } from '../src/util'
+
+// 2. Set up global tracking mocks for verification asserts
+const mockSetFailed = jest.fn()
+const mockInfo = jest.fn()
+const mockError = jest.fn()
+const mockWarning = jest.fn()
+const mockDebug = jest.fn()
+const mockStartGroup = jest.fn()
+const mockEndGroup = jest.fn()
+
+// Inputs for mock @actions/core
+let inputs: Record<string, string> = {}
+
+// 3. Intercept the ESM resolution path natively BEFORE imports execute
+jest.unstable_mockModule('@actions/core', () => ({
+  // Dynamically reads from your local 'inputs' dictionary at runtime
+  getInput: jest.fn((name: string) => inputs[name] || ''),
+  setFailed: mockSetFailed,
+  info: mockInfo,
+  error: mockError,
+  warning: mockWarning,
+  debug: mockDebug,
+  startGroup: mockStartGroup,
+  endGroup: mockEndGroup
+}))
+
+// 4. Dynamically import your local test targets AFTER registering the mock interceptors
+const {
   getLabels,
   getPullRequests,
   addLabelToLabelable,
@@ -13,10 +54,15 @@ import {
   getPullRequestChanges,
   getCommitChanges,
   getPullRequest
-} from '../src/queries'
-import {checkPullRequestForMergeChanges, gatherPullRequests, gatherPullRequest} from '../src/pulls'
-import {updatePullRequestConflictLabel} from '../src/label'
-import {run} from '../src/run'
+} = await import('../src/queries')
+
+const {
+  checkPullRequestForMergeChanges,
+  gatherPullRequests,
+  gatherPullRequest
+} = await import('../src/pulls')
+const { updatePullRequestConflictLabel } = await import('../src/label')
+const { run } = await import('../src/run')
 
 test('throws invalid number', async () => {
   const input = parseInt('foo', 10)
@@ -27,22 +73,31 @@ test('wait 500 ms', async () => {
   const start = new Date()
   await wait(500)
   const end = new Date()
-  var delta = Math.abs(end.getTime() - start.getTime())
+  const delta = Math.abs(end.getTime() - start.getTime())
   expect(delta).toBeGreaterThan(450)
 })
 
 describe('label matching', () => {
   test('find exact from one label', () => {
-    const labelNode = {node: {id: '1654984416', name: 'expected_label'}}
-    const labelData: IGitHubRepoLabels = {repository: {labels: {edges: [labelNode]}}}
+    const labelNode = { node: { id: '1654984416', name: 'expected_label' } }
+    const labelData: IGitHubRepoLabels = {
+      repository: { labels: { edges: [labelNode] } }
+    }
     const node = findLabelByName(labelData, 'expected_label')
     expect(node).toBe(labelNode)
   })
 
   test('finds from many labels', () => {
-    const labelNode = {node: {id: '1654984416', name: 'expected_label'}}
+    const labelNode = { node: { id: '1654984416', name: 'expected_label' } }
     const labelData: IGitHubRepoLabels = {
-      repository: {labels: {edges: [{node: {id: 'MDU6TGFiZWwxMjUyNDcxNTgz', name: 'has conflicts'}}, labelNode]}}
+      repository: {
+        labels: {
+          edges: [
+            { node: { id: 'MDU6TGFiZWwxMjUyNDcxNTgz', name: 'has conflicts' } },
+            labelNode
+          ]
+        }
+      }
     }
     const node = findLabelByName(labelData, 'expected_label')
     expect(node).toBe(labelNode)
@@ -53,20 +108,22 @@ describe('label matching', () => {
       repository: {
         labels: {
           edges: [
-            {node: {id: 'MDU6TGFiZWwxMjUyNDcxNTgz', name: 'has conflicts'}},
-            {node: {id: '1654984416', name: 'some other label'}}
+            { node: { id: 'MDU6TGFiZWwxMjUyNDcxNTgz', name: 'has conflicts' } },
+            { node: { id: '1654984416', name: 'some other label' } }
           ]
         }
       }
     }
     expect(() => {
       findLabelByName(labelData, 'expected_label')
-    }).toThrowError(/expected_label/)
+    }).toThrow(/expected_label/)
   })
 })
 
 describe('pr label checking', () => {
-  const expectedLabel: IGitHubLabelNode = {node: {id: '1654984416', name: 'expected_label'}}
+  const expectedLabel: IGitHubLabelNode = {
+    node: { id: '1654984416', name: 'expected_label' }
+  }
   const makePr = (...label: IGitHubLabelNode[]): IGitHubPullRequest => {
     return {
       id: 'MDExOlB1bGxSZXF1ZXN0NTc4ODgyNDUw',
@@ -78,7 +135,7 @@ describe('pr label checking', () => {
       potentialMergeCommit: {
         oid: '5ed0e15d4ca4ce73e847ee1f0369ee85a6e67bc9'
       },
-      labels: {edges: [...label]}
+      labels: { edges: [...label] }
     }
   }
 
@@ -89,67 +146,57 @@ describe('pr label checking', () => {
   })
 
   test('finds from many labels', () => {
-    const prNode = makePr({node: {id: 'MDU6TGFiZWwxMjUyNDcxNTgz', name: 'has conflicts'}}, expectedLabel)
+    const prNode = makePr(
+      { node: { id: 'MDU6TGFiZWwxMjUyNDcxNTgz', name: 'has conflicts' } },
+      expectedLabel
+    )
     const isLabeled = isAlreadyLabeled(prNode, expectedLabel)
     expect(isLabeled).toBeTruthy()
   })
 
   test('false when no match', () => {
     const prNode = makePr(
-      {node: {id: 'MDU6TGFiZWwxMjUyNDcxNTgz', name: 'has conflicts'}},
-      {node: {id: 'flbvalvbea;lygh;dbl;gblas;', name: 'some other label'}}
+      { node: { id: 'MDU6TGFiZWwxMjUyNDcxNTgz', name: 'has conflicts' } },
+      { node: { id: 'flbvalvbea;lygh;dbl;gblas;', name: 'some other label' } }
     )
     const isLabeled = isAlreadyLabeled(prNode, expectedLabel)
     expect(isLabeled).toBeFalsy()
   })
 })
 
-// Inputs for mock @actions/core
-let inputs = {} as any
-
 // Shallow clone original @actions/github context
-let originalContext = {...github.context}
+const originalContext = { ...context }
 
 describe('queries', () => {
   beforeAll(() => {
-    // Mock getInput
-    jest.spyOn(core, 'getInput').mockImplementation((name: string) => {
-      return inputs[name]
-    })
-
-    // Mock error/warning/info/debug
-    jest.spyOn(core, 'error').mockImplementation(jest.fn())
-    jest.spyOn(core, 'warning').mockImplementation(jest.fn())
-    jest.spyOn(core, 'info').mockImplementation(jest.fn())
-    jest.spyOn(core, 'debug').mockImplementation(jest.fn())
-    jest.spyOn(core, 'startGroup').mockImplementation(jest.fn())
-    jest.spyOn(core, 'endGroup').mockImplementation(jest.fn())
-    jest.spyOn(core, 'setFailed').mockImplementation(jest.fn())
+    nock.disableNetConnect()
 
     // Mock github context
-    jest.spyOn(github.context, 'repo', 'get').mockImplementation(() => {
+    jest.spyOn(context, 'repo', 'get').mockImplementation(() => {
       return {
         owner: 'some-owner',
         repo: 'some-repo'
       }
     })
-    github.context.ref = 'refs/heads/some-ref'
-    github.context.sha = '1234567890123456789012345678901234567890'
-    github.context.eventName = 'push'
+    context.ref = 'refs/heads/some-ref'
+    context.sha = '1234567890123456789012345678901234567890'
+    context.eventName = 'push'
   })
 
   beforeEach(() => {
+    nock.cleanAll()
+
     // Reset inputs
     inputs = {}
-    github.context.eventName = originalContext.eventName
-    github.context.payload = originalContext.payload
+    context.eventName = originalContext.eventName
+    context.payload = originalContext.payload
   })
 
   afterAll(() => {
     // Restore @actions/github context
-    github.context.ref = originalContext.ref
-    github.context.sha = originalContext.sha
-    github.context.eventName = originalContext.eventName
+    context.ref = originalContext.ref
+    context.sha = originalContext.sha
+    context.eventName = originalContext.eventName
 
     // Restore
     jest.restoreAllMocks()
@@ -229,10 +276,18 @@ describe('queries', () => {
         }
       })
         .post('/graphql')
-        .reply(200, {data: {repository: {labels: {edges: [{node: {id: '1654984416', name: 'expected_label'}}]}}}})
+        .reply(200, {
+          data: {
+            repository: {
+              labels: {
+                edges: [{ node: { id: '1654984416', name: 'expected_label' } }]
+              }
+            }
+          }
+        })
 
-      const octokit = github.getOctokit('justafaketoken')
-      const labels = await getLabels(octokit, github.context, 'expected_label')
+      const octokit = getOctokit('justafaketoken')
+      const labels = await getLabels(octokit, context, 'expected_label')
 
       expect(labels.repository.labels.edges.length).toBe(1)
       expect(labels.repository.labels.edges[0].node.id).toBe('1654984416')
@@ -251,25 +306,34 @@ describe('queries', () => {
             repository: {
               labels: {
                 edges: [
-                  {node: {id: 'MDU6TGFiZWwyNzYwMjE1ODI0', name: 'dependencies'}},
-                  {node: {id: 'MDU6TGFiZWwyNzYwMjEzNzMw', name: 'wontfix'}}
+                  {
+                    node: {
+                      id: 'MDU6TGFiZWwyNzYwMjE1ODI0',
+                      name: 'dependencies'
+                    }
+                  },
+                  { node: { id: 'MDU6TGFiZWwyNzYwMjEzNzMw', name: 'wontfix' } }
                 ]
               }
             }
           }
         })
 
-      const octokit = github.getOctokit('justafaketoken')
-      const labels = await getLabels(octokit, github.context, 'expected_label')
+      const octokit = getOctokit('justafaketoken')
+      const labels = await getLabels(octokit, context, 'expected_label')
 
       expect(labels.repository.labels.edges.length).toBe(2)
-      expect(labels.repository.labels.edges[0].node.id).toBe('MDU6TGFiZWwyNzYwMjE1ODI0')
+      expect(labels.repository.labels.edges[0].node.id).toBe(
+        'MDU6TGFiZWwyNzYwMjE1ODI0'
+      )
       expect(labels.repository.labels.edges[0].node.name).toBe('dependencies')
-      expect(labels.repository.labels.edges[1].node.id).toBe('MDU6TGFiZWwyNzYwMjEzNzMw')
+      expect(labels.repository.labels.edges[1].node.id).toBe(
+        'MDU6TGFiZWwyNzYwMjEzNzMw'
+      )
       expect(labels.repository.labels.edges[1].node.name).toBe('wontfix')
     })
 
-    it('gets many similar label', async () => {
+    it('gets many similar label v2', async () => {
       const scope = nock('https://api.github.com', {
         reqheaders: {
           authorization: 'token justafaketoken'
@@ -281,21 +345,30 @@ describe('queries', () => {
             repository: {
               labels: {
                 edges: [
-                  {node: {id: 'MDU6TGFiZWwyNzYwMjE1ODI0', name: 'dependencies'}},
-                  {node: {id: 'MDU6TGFiZWwyNzYwMjEzNzMw', name: 'wontfix'}}
+                  {
+                    node: {
+                      id: 'MDU6TGFiZWwyNzYwMjE1ODI0',
+                      name: 'dependencies'
+                    }
+                  },
+                  { node: { id: 'MDU6TGFiZWwyNzYwMjEzNzMw', name: 'wontfix' } }
                 ]
               }
             }
           }
         })
 
-      const octokit = github.getOctokit('justafaketoken')
-      const labels = await getLabels(octokit, github.context, 'expected_label')
+      const octokit = getOctokit('justafaketoken')
+      const labels = await getLabels(octokit, context, 'expected_label')
 
       expect(labels.repository.labels.edges.length).toBe(2)
-      expect(labels.repository.labels.edges[0].node.id).toBe('MDU6TGFiZWwyNzYwMjE1ODI0')
+      expect(labels.repository.labels.edges[0].node.id).toBe(
+        'MDU6TGFiZWwyNzYwMjE1ODI0'
+      )
       expect(labels.repository.labels.edges[0].node.name).toBe('dependencies')
-      expect(labels.repository.labels.edges[1].node.id).toBe('MDU6TGFiZWwyNzYwMjEzNzMw')
+      expect(labels.repository.labels.edges[1].node.id).toBe(
+        'MDU6TGFiZWwyNzYwMjEzNzMw'
+      )
       expect(labels.repository.labels.edges[1].node.name).toBe('wontfix')
     })
 
@@ -311,10 +384,10 @@ describe('queries', () => {
           documentation_url: 'https://docs.github.com/graphql'
         })
 
-      const octokit = github.getOctokit('justafaketoken')
-      const labels = getLabels(octokit, github.context, 'expected_label')
+      const octokit = getOctokit('justafaketoken')
+      const labels = getLabels(octokit, context, 'expected_label')
 
-      await expect(labels).rejects.toThrowError()
+      await expect(labels).rejects.toThrow()
     })
   })
 
@@ -336,18 +409,21 @@ describe('queries', () => {
                       id: 'MDExOlB1bGxSZXF1ZXN0NTc4ODgyNDUw',
                       number: 7,
                       mergeable: 'MERGEABLE',
-                      labels: {edges: []}
+                      labels: { edges: [] }
                     }
                   }
                 ],
-                pageInfo: {endCursor: 'Y3Vyc29yOnYyOpHOIoELkg==', hasNextPage: false}
+                pageInfo: {
+                  endCursor: 'Y3Vyc29yOnYyOpHOIoELkg==',
+                  hasNextPage: false
+                }
               }
             }
           }
         })
 
-      const octokit = github.getOctokit('justafaketoken')
-      const pullRequests = await getPullRequests(octokit, github.context)
+      const octokit = getOctokit('justafaketoken')
+      const pullRequests = await getPullRequests(octokit, context)
 
       expect(pullRequests.length).toBe(1)
       expect(pullRequests[0].node.id).toBe('MDExOlB1bGxSZXF1ZXN0NTc4ODgyNDUw')
@@ -362,7 +438,10 @@ describe('queries', () => {
           authorization: 'token justafaketoken'
         }
       })
-        .post('/graphql', /\"variables\":{\"owner\":\"some-owner\",\"repo\":\"some-repo\",\"number\":49}/)
+        .post(
+          '/graphql',
+          /\"variables\":{\"owner\":\"some-owner\",\"repo\":\"some-repo\",\"number\":49}/
+        )
         .reply(200, {
           data: {
             repository: {
@@ -388,8 +467,8 @@ describe('queries', () => {
           }
         })
 
-      const octokit = github.getOctokit('justafaketoken')
-      const pullRequests = await getPullRequest(octokit, github.context, 49)
+      const octokit = getOctokit('justafaketoken')
+      const pullRequests = await getPullRequest(octokit, context, 49)
 
       expect(pullRequests.id).toBe('MDExOlB1bGxSZXF1ZXN0NTk3NDgzNjg4')
       expect(pullRequests.number).toBe(49)
@@ -414,11 +493,14 @@ describe('queries', () => {
                       id: 'MDExOlB1bGxSZXF1ZXN0NTc4ODgyNDUw',
                       number: 7,
                       mergeable: 'MERGEABLE',
-                      labels: {edges: []}
+                      labels: { edges: [] }
                     }
                   }
                 ],
-                pageInfo: {endCursor: 'Y3Vyc29yOnYyOpHOGktShA==', hasNextPage: true}
+                pageInfo: {
+                  endCursor: 'Y3Vyc29yOnYyOpHOGktShA==',
+                  hasNextPage: true
+                }
               }
             }
           }
@@ -434,18 +516,21 @@ describe('queries', () => {
                       id: 'justsomestring',
                       number: 64,
                       mergeable: 'MERGEABLE',
-                      labels: {edges: []}
+                      labels: { edges: [] }
                     }
                   }
                 ],
-                pageInfo: {endCursor: 'Y3Vyc29yOnYyOpHOGktShA==', hasNextPage: false}
+                pageInfo: {
+                  endCursor: 'Y3Vyc29yOnYyOpHOGktShA==',
+                  hasNextPage: false
+                }
               }
             }
           }
         })
 
-      const octokit = github.getOctokit('justafaketoken')
-      const pullRequests = await getPullRequests(octokit, github.context)
+      const octokit = getOctokit('justafaketoken')
+      const pullRequests = await getPullRequests(octokit, context)
 
       expect(pullRequests.length).toBe(2)
       expect(pullRequests[0].node.id).toBe('MDExOlB1bGxSZXF1ZXN0NTc4ODgyNDUw')
@@ -476,7 +561,7 @@ describe('queries', () => {
                       id: 'MDExOlB1bGxSZXF1ZXN0NTc4ODgyNDUw',
                       number: 7,
                       mergeable: 'UNKNOWN',
-                      labels: {edges: []}
+                      labels: { edges: [] }
                     }
                   },
                   {
@@ -484,11 +569,14 @@ describe('queries', () => {
                       id: 'justsomestring',
                       number: 64,
                       mergeable: 'MERGEABLE',
-                      labels: {edges: []}
+                      labels: { edges: [] }
                     }
                   }
                 ],
-                pageInfo: {endCursor: 'Y3Vyc29yOnYyOpHOGktShA==', hasNextPage: false}
+                pageInfo: {
+                  endCursor: 'Y3Vyc29yOnYyOpHOGktShA==',
+                  hasNextPage: false
+                }
               }
             }
           }
@@ -504,7 +592,7 @@ describe('queries', () => {
                       id: 'MDExOlB1bGxSZXF1ZXN0NTc4ODgyNDUw',
                       number: 7,
                       mergeable: 'MERGEABLE',
-                      labels: {edges: []}
+                      labels: { edges: [] }
                     }
                   },
                   {
@@ -512,18 +600,21 @@ describe('queries', () => {
                       id: 'justsomestring',
                       number: 64,
                       mergeable: 'MERGEABLE',
-                      labels: {edges: []}
+                      labels: { edges: [] }
                     }
                   }
                 ],
-                pageInfo: {endCursor: 'Y3Vyc29yOnYyOpHOGktShA==', hasNextPage: false}
+                pageInfo: {
+                  endCursor: 'Y3Vyc29yOnYyOpHOGktShA==',
+                  hasNextPage: false
+                }
               }
             }
           }
         })
 
-      const octokit = github.getOctokit('justafaketoken')
-      const pullRequests = await gatherPullRequests(octokit, github.context, 10, 1)
+      const octokit = getOctokit('justafaketoken')
+      const pullRequests = await gatherPullRequests(octokit, context, 10, 1)
 
       expect(pullRequests.length).toBe(2)
       expect(pullRequests[0].node.id).toBe('MDExOlB1bGxSZXF1ZXN0NTc4ODgyNDUw')
@@ -556,7 +647,7 @@ describe('queries', () => {
                     id: 'MDExOlB1bGxSZXF1ZXN0NTc4ODgyNDUw',
                     number: 7,
                     mergeable: 'UNKNOWN',
-                    labels: {edges: []}
+                    labels: { edges: [] }
                   }
                 },
                 {
@@ -564,21 +655,24 @@ describe('queries', () => {
                     id: 'justsomestring',
                     number: 64,
                     mergeable: 'MERGEABLE',
-                    labels: {edges: []}
+                    labels: { edges: [] }
                   }
                 }
               ],
-              pageInfo: {endCursor: 'Y3Vyc29yOnYyOpHOGktShA==', hasNextPage: false}
+              pageInfo: {
+                endCursor: 'Y3Vyc29yOnYyOpHOGktShA==',
+                hasNextPage: false
+              }
             }
           }
         }
       })
 
-    const octokit = github.getOctokit('justafaketoken')
+    const octokit = getOctokit('justafaketoken')
     const start = new Date()
-    const pullRequests = await gatherPullRequests(octokit, github.context, 25, 2)
+    const pullRequests = await gatherPullRequests(octokit, context, 25, 2)
     const end = new Date()
-    var delta = Math.abs(end.getTime() - start.getTime())
+    const delta = Math.abs(end.getTime() - start.getTime())
     expect(delta).toBeGreaterThan(45)
 
     expect(pullRequests.length).toBe(2)
@@ -599,7 +693,10 @@ describe('queries', () => {
         authorization: 'token justafaketoken'
       }
     })
-      .post('/graphql', /\"variables\":{\"owner\":\"some-owner\",\"repo\":\"some-repo\",\"number\":2}/)
+      .post(
+        '/graphql',
+        /\"variables\":{\"owner\":\"some-owner\",\"repo\":\"some-repo\",\"number\":2}/
+      )
       .reply(200, {
         data: {
           repository: {
@@ -624,7 +721,10 @@ describe('queries', () => {
           }
         }
       })
-      .post('/graphql', /\"variables\":{\"owner\":\"some-owner\",\"repo\":\"some-repo\",\"number\":2}/)
+      .post(
+        '/graphql',
+        /\"variables\":{\"owner\":\"some-owner\",\"repo\":\"some-repo\",\"number\":2}/
+      )
       .reply(200, {
         data: {
           repository: {
@@ -650,11 +750,17 @@ describe('queries', () => {
         }
       })
 
-    const octokit = github.getOctokit('justafaketoken')
+    const octokit = getOctokit('justafaketoken')
     const start = new Date()
-    const pullRequest = await gatherPullRequest(octokit, github.context, mockPullRequestEvent as any, 25, 2)
+    const pullRequest = await gatherPullRequest(
+      octokit,
+      context,
+      mockPullRequestEvent as any,
+      25,
+      2
+    )
     const end = new Date()
-    var delta = Math.abs(end.getTime() - start.getTime())
+    const delta = Math.abs(end.getTime() - start.getTime())
 
     expect(delta).toBeGreaterThan(45)
     expect(delta).toBeLessThan(75)
@@ -671,7 +777,10 @@ describe('queries', () => {
         authorization: 'token justafaketoken'
       }
     })
-      .post('/graphql', /\"variables\":{\"owner\":\"some-owner\",\"repo\":\"some-repo\",\"number\":2}/)
+      .post(
+        '/graphql',
+        /\"variables\":{\"owner\":\"some-owner\",\"repo\":\"some-repo\",\"number\":2}/
+      )
       .times(3)
       .reply(200, {
         data: {
@@ -698,10 +807,18 @@ describe('queries', () => {
         }
       })
 
-    const octokit = github.getOctokit('justafaketoken')
-    const pullRequest = gatherPullRequest(octokit, github.context, mockPullRequestEvent as any, 25, 2)
+    const octokit = getOctokit('justafaketoken')
+    const pullRequest = gatherPullRequest(
+      octokit,
+      context,
+      mockPullRequestEvent as any,
+      25,
+      2
+    )
 
-    await expect(pullRequest).rejects.toThrowError(/Could not determine mergeable status/)
+    await expect(pullRequest).rejects.toThrow(
+      /Could not determine mergeable status/
+    )
   })
 
   describe('modifies labels', () => {
@@ -716,9 +833,9 @@ describe('queries', () => {
             '/graphql',
             /addLabelsToLabelable.*variables.*MDU6TGFiZWwyNzYwMjE1ODI0.*MDExOlB1bGxSZXF1ZXN0NTc4ODgyNDUw.*/
           )
-          .reply(200, {data: {}})
+          .reply(200, { data: {} })
 
-        const octokit = github.getOctokit('justafaketoken')
+        const octokit = getOctokit('justafaketoken')
         const add = await addLabelToLabelable(octokit, {
           labelId: 'MDU6TGFiZWwyNzYwMjE1ODI0',
           labelableId: 'MDExOlB1bGxSZXF1ZXN0NTc4ODgyNDUw'
@@ -739,13 +856,13 @@ describe('queries', () => {
             documentation_url: 'https://docs.github.com/graphql'
           })
 
-        const octokit = github.getOctokit('justafaketoken')
+        const octokit = getOctokit('justafaketoken')
         const labels = addLabelToLabelable(octokit, {
           labelId: 'MDU6TGFiZWwyNzYwMjE1ODI0',
           labelableId: 'MDExOlB1bGxSZXF1ZXN0NTc4ODgyNDUw'
         })
 
-        await expect(labels).rejects.toThrowError()
+        await expect(labels).rejects.toThrow()
       })
     })
 
@@ -760,9 +877,9 @@ describe('queries', () => {
             '/graphql',
             /removeLabelsFromLabelable.*variables.*MDU6TGFiZWwyNzYwMjE1ODI0.*MDExOlB1bGxSZXF1ZXN0NTc4ODgyNDUw.*/
           )
-          .reply(200, {data: {}})
+          .reply(200, { data: {} })
 
-        const octokit = github.getOctokit('justafaketoken')
+        const octokit = getOctokit('justafaketoken')
         const add = await removeLabelFromLabelable(octokit, {
           labelId: 'MDU6TGFiZWwyNzYwMjE1ODI0',
           labelableId: 'MDExOlB1bGxSZXF1ZXN0NTc4ODgyNDUw'
@@ -783,13 +900,13 @@ describe('queries', () => {
             documentation_url: 'https://docs.github.com/graphql'
           })
 
-        const octokit = github.getOctokit('justafaketoken')
+        const octokit = getOctokit('justafaketoken')
         const labels = removeLabelFromLabelable(octokit, {
           labelId: 'MDU6TGFiZWwyNzYwMjE1ODI0',
           labelableId: 'MDExOlB1bGxSZXF1ZXN0NTc4ODgyNDUw'
         })
 
-        await expect(labels).rejects.toThrowError()
+        await expect(labels).rejects.toThrow()
       })
     })
   })
@@ -802,7 +919,9 @@ describe('queries', () => {
             authorization: 'token justafaketoken'
           }
         })
-          .get(`/repos/${github.context.repo.owner}/${github.context.repo.repo}/pulls/123/files?per_page=300`)
+          .get(
+            `/repos/${context.repo.owner}/${context.repo.repo}/pulls/123/files?per_page=300`
+          )
           .reply(200, [
             {
               sha: 'a8f3b51f97dbe31d1da584262e01b3ac2465d2d8',
@@ -819,12 +938,14 @@ describe('queries', () => {
             }
           ])
 
-        const octokit = github.getOctokit('justafaketoken')
-        const prChanges = await getPullRequestChanges(octokit, github.context, 123)
+        const octokit = getOctokit('justafaketoken')
+        const prChanges = await getPullRequestChanges(octokit, context, 123)
 
         expect(prChanges).toBeTruthy()
         expect(prChanges.length).toBe(2)
-        expect(prChanges[1].sha).toBe('cb0f93f2eeaa80d2fbddff1d7169e254f89b7ecb')
+        expect(prChanges[1].sha).toBe(
+          'cb0f93f2eeaa80d2fbddff1d7169e254f89b7ecb'
+        )
         expect(prChanges[1].filename).toBe('recipes/protobuf/all/conanfile.py')
       })
 
@@ -834,16 +955,19 @@ describe('queries', () => {
             authorization: 'token justafaketoken'
           }
         })
-          .get(`/repos/${github.context.repo.owner}/${github.context.repo.repo}/pulls/123/files?per_page=300`)
+          .get(
+            `/repos/${context.repo.owner}/${context.repo.repo}/pulls/123/files?per_page=300`
+          )
           .reply(404, {
             message: 'Not Found',
-            documentation_url: 'https://docs.github.com/rest/reference/pulls#list-pull-requests-files'
+            documentation_url:
+              'https://docs.github.com/rest/reference/pulls#list-pull-requests-files'
           })
 
-        const octokit = github.getOctokit('justafaketoken')
-        const prCahnges = getPullRequestChanges(octokit, github.context, 123)
+        const octokit = getOctokit('justafaketoken')
+        const prCahnges = getPullRequestChanges(octokit, context, 123)
 
-        await expect(prCahnges).rejects.toThrowError(/Not Found/)
+        await expect(prCahnges).rejects.toThrow(/Not Found/)
       })
     })
 
@@ -867,7 +991,8 @@ describe('queries', () => {
           sha: 'f21465c9d35d01b9d27d822dc0efe05f39f1f792',
           filename: 'recipes/graphene/config.yml',
           status: 'added',
-          patch: '@@ -0,0 +1,3 @@\n+versions:\n+    "1.10.2":\n+        folder: "all"'
+          patch:
+            '@@ -0,0 +1,3 @@\n+versions:\n+    "1.10.2":\n+        folder: "all"'
         }
       ]
       it('gets a list', async () => {
@@ -876,10 +1001,13 @@ describe('queries', () => {
             authorization: 'token justafaketoken'
           }
         })
-          .get(`/repos/${github.context.repo.owner}/${github.context.repo.repo}/commits/${github.context.sha}`)
+          .get(
+            `/repos/${context.repo.owner}/${context.repo.repo}/commits/${context.sha}`
+          )
           .reply(200, {
             sha: '78db84765bc6de1a254d969c4d6b2f09a9862355',
-            node_id: 'MDY6Q29tbWl0MjA0NjcxMjMyOjc4ZGI4NDc2NWJjNmRlMWEyNTRkOTY5YzRkNmIyZjA5YTk4NjIzNTU=',
+            node_id:
+              'MDY6Q29tbWl0MjA0NjcxMjMyOjc4ZGI4NDc2NWJjNmRlMWEyNTRkOTY5YzRkNmIyZjA5YTk4NjIzNTU=',
             commit: {
               author: {
                 date: '2021-01-07T15:31:36Z'
@@ -904,12 +1032,18 @@ describe('queries', () => {
             files: changes
           })
 
-        const octokit = github.getOctokit('justafaketoken')
-        const mergeChanges = await getCommitChanges(octokit, github.context, github.context.sha)
+        const octokit = getOctokit('justafaketoken')
+        const mergeChanges = await getCommitChanges(
+          octokit,
+          context,
+          context.sha
+        )
 
         expect(mergeChanges).toBeTruthy()
         expect(mergeChanges.length).toBe(3)
-        expect(mergeChanges[2].sha).toBe('f21465c9d35d01b9d27d822dc0efe05f39f1f792')
+        expect(mergeChanges[2].sha).toBe(
+          'f21465c9d35d01b9d27d822dc0efe05f39f1f792'
+        )
         expect(mergeChanges[2].filename).toBe('recipes/graphene/config.yml')
       })
 
@@ -919,16 +1053,20 @@ describe('queries', () => {
             authorization: 'token justafaketoken'
           }
         })
-          .get(`/repos/${github.context.repo.owner}/${github.context.repo.repo}/commits/${github.context.sha}`)
+          .get(
+            `/repos/${context.repo.owner}/${context.repo.repo}/commits/${context.sha}`
+          )
           .reply(422, {
-            message: 'No commit found for SHA: 78db84765bc6de1a254d969c4d6b2f09a62355',
-            documentation_url: 'https://docs.github.com/rest/reference/repos#get-a-commit'
+            message:
+              'No commit found for SHA: 78db84765bc6de1a254d969c4d6b2f09a62355',
+            documentation_url:
+              'https://docs.github.com/rest/reference/repos#get-a-commit'
           })
 
-        const octokit = github.getOctokit('justafaketoken')
+        const octokit = getOctokit('justafaketoken')
 
-        const mergeChanges = getCommitChanges(octokit, github.context, github.context.sha)
-        expect(mergeChanges).rejects.toThrowError(/No commit found/)
+        const mergeChanges = getCommitChanges(octokit, context, context.sha)
+        await expect(mergeChanges).rejects.toThrow(/No commit found/)
       })
 
       it('throws with no files', async () => {
@@ -937,10 +1075,13 @@ describe('queries', () => {
             authorization: 'token justafaketoken'
           }
         })
-          .get(`/repos/${github.context.repo.owner}/${github.context.repo.repo}/commits/${github.context.sha}`)
+          .get(
+            `/repos/${context.repo.owner}/${context.repo.repo}/commits/${context.sha}`
+          )
           .reply(200, {
             sha: '78db84765bc6de1a254d969c4d6b2f09a9862355',
-            node_id: 'MDY6Q29tbWl0MjA0NjcxMjMyOjc4ZGI4NDc2NWJjNmRlMWEyNTRkOTY5YzRkNmIyZjA5YTk4NjIzNTU=',
+            node_id:
+              'MDY6Q29tbWl0MjA0NjcxMjMyOjc4ZGI4NDc2NWJjNmRlMWEyNTRkOTY5YzRkNmIyZjA5YTk4NjIzNTU=',
             commit: {
               author: {
                 date: '2021-01-07T15:31:36Z'
@@ -964,10 +1105,10 @@ describe('queries', () => {
             ]
           })
 
-        const octokit = github.getOctokit('justafaketoken')
+        const octokit = getOctokit('justafaketoken')
 
-        const mergeChanges = getCommitChanges(octokit, github.context, github.context.sha)
-        expect(mergeChanges).rejects.toThrowError(/unknown diff/)
+        const mergeChanges = getCommitChanges(octokit, context, context.sha)
+        await expect(mergeChanges).rejects.toThrow(/unknown diff/)
       })
     })
 
@@ -983,7 +1124,7 @@ describe('queries', () => {
           potentialMergeCommit: {
             oid: '5ed0e15d4ca4ce73e847ee1f0369ee85a6e67bc9'
           },
-          labels: {edges: []}
+          labels: { edges: [] }
         }
       }
 
@@ -1006,7 +1147,8 @@ describe('queries', () => {
       const makeCommitPage = (...changes: any[]) => {
         return {
           sha: '5ed0e15d4ca4ce73e847ee1f0369ee85a6e67bc9',
-          node_id: 'MDY6Q29tbWl0MjA0NjcxMjMyOjc4ZGI4NDc2NWJjNmRlMWEyNTRkOTY5YzRkNmIyZjA5YTk4NjIzNTU=',
+          node_id:
+            'MDY6Q29tbWl0MjA0NjcxMjMyOjc4ZGI4NDc2NWJjNmRlMWEyNTRkOTY5YzRkNmIyZjA5YTk4NjIzNTU=',
           commit: {
             author: {
               date: '2021-01-07T15:31:36Z'
@@ -1039,16 +1181,20 @@ describe('queries', () => {
           }
         })
           .get(
-            `/repos/${github.context.repo.owner}/${github.context.repo.repo}/pulls/${prNode.node.number}/files?per_page=300`
+            `/repos/${context.repo.owner}/${context.repo.repo}/pulls/${prNode.node.number}/files?per_page=300`
           )
           .reply(200, changes)
           .get(
-            `/repos/${github.context.repo.owner}/${github.context.repo.repo}/commits/${prNode.node.potentialMergeCommit.oid}`
+            `/repos/${context.repo.owner}/${context.repo.repo}/commits/${prNode.node.potentialMergeCommit.oid}`
           )
           .reply(200, makeCommitPage(changes[0]))
 
-        const octokit = github.getOctokit('justafaketoken')
-        const changed = await checkPullRequestForMergeChanges(octokit, github.context, prNode.node)
+        const octokit = getOctokit('justafaketoken')
+        const changed = await checkPullRequestForMergeChanges(
+          octokit,
+          context,
+          prNode.node
+        )
 
         expect(changed).toBe(true)
       })
@@ -1060,16 +1206,20 @@ describe('queries', () => {
           }
         })
           .get(
-            `/repos/${github.context.repo.owner}/${github.context.repo.repo}/pulls/${prNode.node.number}/files?per_page=300`
+            `/repos/${context.repo.owner}/${context.repo.repo}/pulls/${prNode.node.number}/files?per_page=300`
           )
           .reply(200, [changes[0]])
           .get(
-            `/repos/${github.context.repo.owner}/${github.context.repo.repo}/commits/${prNode.node.potentialMergeCommit.oid}`
+            `/repos/${context.repo.owner}/${context.repo.repo}/commits/${prNode.node.potentialMergeCommit.oid}`
           )
           .reply(200, makeCommitPage(changes[1]))
 
-        const octokit = github.getOctokit('justafaketoken')
-        const changed = await checkPullRequestForMergeChanges(octokit, github.context, prNode.node)
+        const octokit = getOctokit('justafaketoken')
+        const changed = await checkPullRequestForMergeChanges(
+          octokit,
+          context,
+          prNode.node
+        )
 
         expect(changed).toBe(true)
       })
@@ -1081,16 +1231,20 @@ describe('queries', () => {
           }
         })
           .get(
-            `/repos/${github.context.repo.owner}/${github.context.repo.repo}/pulls/${prNode.node.number}/files?per_page=300`
+            `/repos/${context.repo.owner}/${context.repo.repo}/pulls/${prNode.node.number}/files?per_page=300`
           )
           .reply(200, changes)
           .get(
-            `/repos/${github.context.repo.owner}/${github.context.repo.repo}/commits/${prNode.node.potentialMergeCommit.oid}`
+            `/repos/${context.repo.owner}/${context.repo.repo}/commits/${prNode.node.potentialMergeCommit.oid}`
           )
           .reply(200, makeCommitPage(...changes))
 
-        const octokit = github.getOctokit('justafaketoken')
-        const changed = await checkPullRequestForMergeChanges(octokit, github.context, prNode.node)
+        const octokit = getOctokit('justafaketoken')
+        const changed = await checkPullRequestForMergeChanges(
+          octokit,
+          context,
+          prNode.node
+        )
 
         expect(changed).toBe(false)
       })
@@ -1098,8 +1252,13 @@ describe('queries', () => {
   })
 
   describe('correctly determines labeling', () => {
-    const expectedLabel: IGitHubLabelNode = {node: {id: 'MDU6TGFiZWwyNzYwMjE1ODI0', name: 'expected_label'}}
-    const makePr = (mergeable: string, ...label: IGitHubLabelNode[]): IGitHubPullRequest => {
+    const expectedLabel: IGitHubLabelNode = {
+      node: { id: 'MDU6TGFiZWwyNzYwMjE1ODI0', name: 'expected_label' }
+    }
+    const makePr = (
+      mergeable: string,
+      ...label: IGitHubLabelNode[]
+    ): IGitHubPullRequest => {
       return {
         id: 'MDExOlB1bGxSZXF1ZXN0NTc4ODgyNDUw',
         number: 7,
@@ -1110,7 +1269,7 @@ describe('queries', () => {
         potentialMergeCommit: {
           oid: '5ed0e15d4ca4ce73e847ee1f0369ee85a6e67bc9'
         },
-        labels: {edges: [...label]}
+        labels: { edges: [...label] }
       }
     }
 
@@ -1125,13 +1284,20 @@ describe('queries', () => {
             '/graphql',
             /addLabelsToLabelable.*variables.*MDU6TGFiZWwyNzYwMjE1ODI0.*MDExOlB1bGxSZXF1ZXN0NTc4ODgyNDUw.*/
           )
-          .reply(200, {data: {clientMutationId: 'auniqueid'}})
+          .reply(200, { data: { clientMutationId: 'auniqueid' } })
 
         const pullRequest = makePr('CONFLICTING')
-        const octokit = github.getOctokit('justafaketoken')
-        const added = updatePullRequestConflictLabel(octokit, github.context, pullRequest, expectedLabel, false, {
-          apply: false
-        })
+        const octokit = getOctokit('justafaketoken')
+        const added = updatePullRequestConflictLabel(
+          octokit,
+          context,
+          pullRequest,
+          expectedLabel,
+          false,
+          {
+            apply: false
+          }
+        )
 
         await expect(added).resolves.toBe(undefined)
       })
@@ -1146,19 +1312,26 @@ describe('queries', () => {
             '/graphql',
             /addLabelsToLabelable.*variables.*MDU6TGFiZWwyNzYwMjE1ODI0.*MDExOlB1bGxSZXF1ZXN0NTc4ODgyNDUw.*/
           )
-          .reply(200, {data: {clientMutationId: 'auniqueid'}})
+          .reply(200, { data: { clientMutationId: 'auniqueid' } })
           .post(
             '/graphql',
             /addComment.*variables.*MDExOlB1bGxSZXF1ZXN0NTc4ODgyNDUw.*justausername's super awesome comment.*/
           )
-          .reply(200, {data: {clientMutationId: 'auniqueid'}})
+          .reply(200, { data: { clientMutationId: 'auniqueid' } })
 
         const pullRequest = makePr('CONFLICTING')
-        const octokit = github.getOctokit('justafaketoken')
-        const added = updatePullRequestConflictLabel(octokit, github.context, pullRequest, expectedLabel, false, {
-          apply: true,
-          body: "${author}'s super awesome comment"
-        })
+        const octokit = getOctokit('justafaketoken')
+        const added = updatePullRequestConflictLabel(
+          octokit,
+          context,
+          pullRequest,
+          expectedLabel,
+          false,
+          {
+            apply: true,
+            body: "${author}'s super awesome comment"
+          }
+        )
 
         await expect(added).resolves.toBe(undefined)
       })
@@ -1179,12 +1352,19 @@ describe('queries', () => {
           })
 
         const pullRequest = makePr('CONFLICTING')
-        const octokit = github.getOctokit('justafaketoken')
-        const added = updatePullRequestConflictLabel(octokit, github.context, pullRequest, expectedLabel, false, {
-          apply: false
-        })
+        const octokit = getOctokit('justafaketoken')
+        const added = updatePullRequestConflictLabel(
+          octokit,
+          context,
+          pullRequest,
+          expectedLabel,
+          false,
+          {
+            apply: false
+          }
+        )
 
-        await expect(added).rejects.toThrowError()
+        await expect(added).rejects.toThrow()
       })
 
       it('throws on comment error response', async () => {
@@ -1197,34 +1377,53 @@ describe('queries', () => {
             '/graphql',
             /addLabelsToLabelable.*variables.*MDU6TGFiZWwyNzYwMjE1ODI0.*MDExOlB1bGxSZXF1ZXN0NTc4ODgyNDUw.*/
           )
-          .reply(200, {data: {clientMutationId: 'auniqueid'}})
-          .post('/graphql', /addComment.*variables.*MDExOlB1bGxSZXF1ZXN0NTc4ODgyNDUw.*super awesome comment.*/)
+          .reply(200, { data: { clientMutationId: 'auniqueid' } })
+          .post(
+            '/graphql',
+            /addComment.*variables.*MDExOlB1bGxSZXF1ZXN0NTc4ODgyNDUw.*super awesome comment.*/
+          )
           .reply(400, {
             message: 'Body should be a JSON object',
             documentation_url: 'https://docs.github.com/graphql'
           })
 
         const pullRequest = makePr('CONFLICTING')
-        const octokit = github.getOctokit('justafaketoken')
-        const added = updatePullRequestConflictLabel(octokit, github.context, pullRequest, expectedLabel, false, {
-          apply: true,
-          body: 'super awesome comment'
-        })
+        const octokit = getOctokit('justafaketoken')
+        const added = updatePullRequestConflictLabel(
+          octokit,
+          context,
+          pullRequest,
+          expectedLabel,
+          false,
+          {
+            apply: true,
+            body: 'super awesome comment'
+          }
+        )
 
-        await expect(added).rejects.toThrowError()
+        await expect(added).rejects.toThrow()
       })
 
       it('does nothing when already labeled', async () => {
         const pullRequest = makePr('CONFLICTING', expectedLabel)
 
-        const octokit = github.getOctokit('justafaketoken')
-        const mockFunction = jest.spyOn(octokit, 'graphql').mockImplementation(jest.fn())
-        await updatePullRequestConflictLabel(octokit, github.context, pullRequest, expectedLabel, false, {
-          apply: true,
-          body: 'super awesome comment'
-        })
+        const octokit = getOctokit('justafaketoken')
+        const mockFunction = jest
+          .spyOn(octokit, 'graphql')
+          .mockImplementation(jest.fn())
+        await updatePullRequestConflictLabel(
+          octokit,
+          context,
+          pullRequest,
+          expectedLabel,
+          false,
+          {
+            apply: true,
+            body: 'super awesome comment'
+          }
+        )
 
-        expect(mockFunction).not.toBeCalled()
+        expect(mockFunction).not.toHaveBeenCalled()
       })
     })
 
@@ -1239,15 +1438,22 @@ describe('queries', () => {
             '/graphql',
             /removeLabelsFromLabelable.*variables.*MDU6TGFiZWwyNzYwMjE1ODI0.*MDExOlB1bGxSZXF1ZXN0NTc4ODgyNDUw.*/
           )
-          .reply(200, {data: {}})
+          .reply(200, { data: {} })
 
         const pullRequest = makePr('MERGEABLE', expectedLabel)
 
-        const octokit = github.getOctokit('justafaketoken')
-        const removed = updatePullRequestConflictLabel(octokit, github.context, pullRequest, expectedLabel, false, {
-          apply: true,
-          body: 'super awesome comment'
-        })
+        const octokit = getOctokit('justafaketoken')
+        const removed = updatePullRequestConflictLabel(
+          octokit,
+          context,
+          pullRequest,
+          expectedLabel,
+          false,
+          {
+            apply: true,
+            body: 'super awesome comment'
+          }
+        )
 
         await expect(removed).resolves.toBe(undefined)
       })
@@ -1265,26 +1471,42 @@ describe('queries', () => {
           })
 
         const pullRequest = makePr('MERGEABLE', expectedLabel)
-        const octokit = github.getOctokit('justafaketoken')
-        const removed = updatePullRequestConflictLabel(octokit, github.context, pullRequest, expectedLabel, false, {
-          apply: true,
-          body: 'super awesome comment'
-        })
+        const octokit = getOctokit('justafaketoken')
+        const removed = updatePullRequestConflictLabel(
+          octokit,
+          context,
+          pullRequest,
+          expectedLabel,
+          false,
+          {
+            apply: true,
+            body: 'super awesome comment'
+          }
+        )
 
-        await expect(removed).rejects.toThrowError()
+        await expect(removed).rejects.toThrow()
       })
 
       it('does nothing when no label', async () => {
         const pullRequest = makePr('MERGEABLE')
 
-        const octokit = github.getOctokit('justafaketoken')
-        const mockFunction = jest.spyOn(octokit, 'graphql').mockImplementation(jest.fn())
-        await updatePullRequestConflictLabel(octokit, github.context, pullRequest, expectedLabel, false, {
-          apply: true,
-          body: 'super awesome comment'
-        })
+        const octokit = getOctokit('justafaketoken')
+        const mockFunction = jest
+          .spyOn(octokit, 'graphql')
+          .mockImplementation(jest.fn())
+        await updatePullRequestConflictLabel(
+          octokit,
+          context,
+          pullRequest,
+          expectedLabel,
+          false,
+          {
+            apply: true,
+            body: 'super awesome comment'
+          }
+        )
 
-        expect(mockFunction).not.toBeCalled()
+        expect(mockFunction).not.toHaveBeenCalled()
       })
     })
 
@@ -1297,7 +1519,7 @@ describe('queries', () => {
           }
         })
           .get(
-            `/repos/${github.context.repo.owner}/${github.context.repo.repo}/pulls/${pullRequest.number}/files?per_page=300`
+            `/repos/${context.repo.owner}/${context.repo.repo}/pulls/${pullRequest.number}/files?per_page=300`
           )
           .reply(200, [
             {
@@ -1309,11 +1531,12 @@ describe('queries', () => {
             }
           ])
           .get(
-            `/repos/${github.context.repo.owner}/${github.context.repo.repo}/commits/${pullRequest.potentialMergeCommit.oid}`
+            `/repos/${context.repo.owner}/${context.repo.repo}/commits/${pullRequest.potentialMergeCommit.oid}`
           )
           .reply(200, {
             sha: '7ac057b641fec3b2b4a0ccdadb2b7476faca8bf0',
-            node_id: 'MDY6Q29tbWl0MjA0NjcxMjMyOjdhYzA1N2I2NDFmZWMzYjJiNGEwY2NkYWRiMmI3NDc2ZmFjYThiZjA=',
+            node_id:
+              'MDY6Q29tbWl0MjA0NjcxMjMyOjdhYzA1N2I2NDFmZWMzYjJiNGEwY2NkYWRiMmI3NDc2ZmFjYThiZjA=',
             commit: {
               author: {
                 name: 'SSE4',
@@ -1325,7 +1548,8 @@ describe('queries', () => {
                 email: 'noreply@github.com',
                 date: '2021-03-14T00:37:50Z'
               },
-              message: 'Merge d66759bedaa040252d0ef66be5655202e324ff6c into c14910196b33ef8b99737078e284171a73418c17'
+              message:
+                'Merge d66759bedaa040252d0ef66be5655202e324ff6c into c14910196b33ef8b99737078e284171a73418c17'
             },
             author: {
               login: 'SSE4',
@@ -1359,13 +1583,20 @@ describe('queries', () => {
             '/graphql',
             /removeLabelsFromLabelable.*variables.*MDU6TGFiZWwyNzYwMjE1ODI0.*MDExOlB1bGxSZXF1ZXN0NTc4ODgyNDUw.*/
           )
-          .reply(200, {data: {}})
+          .reply(200, { data: {} })
 
-        const octokit = github.getOctokit('justafaketoken')
-        const removed = updatePullRequestConflictLabel(octokit, github.context, pullRequest, expectedLabel, true, {
-          apply: true,
-          body: 'super awesome comment'
-        })
+        const octokit = getOctokit('justafaketoken')
+        const removed = updatePullRequestConflictLabel(
+          octokit,
+          context,
+          pullRequest,
+          expectedLabel,
+          true,
+          {
+            apply: true,
+            body: 'super awesome comment'
+          }
+        )
 
         await expect(removed).resolves.toBe(undefined)
       })
@@ -1378,7 +1609,7 @@ describe('queries', () => {
           }
         })
           .get(
-            `/repos/${github.context.repo.owner}/${github.context.repo.repo}/pulls/${pullRequest.number}/files?per_page=300`
+            `/repos/${context.repo.owner}/${context.repo.repo}/pulls/${pullRequest.number}/files?per_page=300`
           )
           .reply(200, [
             {
@@ -1397,11 +1628,12 @@ describe('queries', () => {
             }
           ])
           .get(
-            `/repos/${github.context.repo.owner}/${github.context.repo.repo}/commits/${pullRequest.potentialMergeCommit.oid}`
+            `/repos/${context.repo.owner}/${context.repo.repo}/commits/${pullRequest.potentialMergeCommit.oid}`
           )
           .reply(200, {
             sha: 'd98404b1b9ebbc0397da93b81244511ab11867fe',
-            node_id: 'MDY6Q29tbWl0MjA0NjcxMjMyOmQ5ODQwNGIxYjllYmJjMDM5N2RhOTNiODEyNDQ1MTFhYjExODY3ZmU=',
+            node_id:
+              'MDY6Q29tbWl0MjA0NjcxMjMyOmQ5ODQwNGIxYjllYmJjMDM5N2RhOTNiODEyNDQ1MTFhYjExODY3ZmU=',
             commit: {
               author: {
                 name: 'SpaceIm',
@@ -1413,7 +1645,8 @@ describe('queries', () => {
                 email: 'noreply@github.com',
                 date: '2021-03-13T20:07:06Z'
               },
-              message: 'Merge 4e3af1d3e958c8ad18c374d5254a52501980432d into c14910196b33ef8b99737078e284171a73418c17'
+              message:
+                'Merge 4e3af1d3e958c8ad18c374d5254a52501980432d into c14910196b33ef8b99737078e284171a73418c17'
             },
             author: {
               login: 'SpaceIm',
@@ -1454,12 +1687,19 @@ describe('queries', () => {
             '/graphql',
             /addLabelsToLabelable.*variables.*MDU6TGFiZWwyNzYwMjE1ODI0.*MDExOlB1bGxSZXF1ZXN0NDQzNTg3NjI1.*/
           )
-          .reply(200, {data: {}})
+          .reply(200, { data: {} })
 
-        const octokit = github.getOctokit('justafaketoken')
-        const add = updatePullRequestConflictLabel(octokit, github.context, pullRequest, expectedLabel, true, {
-          apply: false
-        })
+        const octokit = getOctokit('justafaketoken')
+        const add = updatePullRequestConflictLabel(
+          octokit,
+          context,
+          pullRequest,
+          expectedLabel,
+          true,
+          {
+            apply: false
+          }
+        )
 
         await expect(add).resolves.toBe(undefined)
       })
@@ -1472,7 +1712,7 @@ describe('queries', () => {
           }
         })
           .get(
-            `/repos/${github.context.repo.owner}/${github.context.repo.repo}/pulls/${pullRequest.number}/files?per_page=300`
+            `/repos/${context.repo.owner}/${context.repo.repo}/pulls/${pullRequest.number}/files?per_page=300`
           )
           .reply(200, [
             {
@@ -1491,11 +1731,12 @@ describe('queries', () => {
             }
           ])
           .get(
-            `/repos/${github.context.repo.owner}/${github.context.repo.repo}/commits/${pullRequest.potentialMergeCommit.oid}`
+            `/repos/${context.repo.owner}/${context.repo.repo}/commits/${pullRequest.potentialMergeCommit.oid}`
           )
           .reply(200, {
             sha: 'd98404b1b9ebbc0397da93b81244511ab11867fe',
-            node_id: 'MDY6Q29tbWl0MjA0NjcxMjMyOmQ5ODQwNGIxYjllYmJjMDM5N2RhOTNiODEyNDQ1MTFhYjExODY3ZmU=',
+            node_id:
+              'MDY6Q29tbWl0MjA0NjcxMjMyOmQ5ODQwNGIxYjllYmJjMDM5N2RhOTNiODEyNDQ1MTFhYjExODY3ZmU=',
             commit: {
               author: {
                 name: 'SpaceIm',
@@ -1507,7 +1748,8 @@ describe('queries', () => {
                 email: 'noreply@github.com',
                 date: '2021-03-13T20:07:06Z'
               },
-              message: 'Merge 4e3af1d3e958c8ad18c374d5254a52501980432d into c14910196b33ef8b99737078e284171a73418c17'
+              message:
+                'Merge 4e3af1d3e958c8ad18c374d5254a52501980432d into c14910196b33ef8b99737078e284171a73418c17'
             },
             author: {
               login: 'SpaceIm',
@@ -1548,15 +1790,25 @@ describe('queries', () => {
             '/graphql',
             /addLabelsToLabelable.*variables.*MDU6TGFiZWwyNzYwMjE1ODI0.*MDExOlB1bGxSZXF1ZXN0NDQzNTg3NjI1.*/
           )
-          .reply(200, {data: {}})
-          .post('/graphql', /addComment.*variables.*MDExOlB1bGxSZXF1ZXN0NTc4ODgyNDUw.*super awesome comment.*/)
-          .reply(200, {data: {clientMutationId: 'auniqueid'}})
+          .reply(200, { data: {} })
+          .post(
+            '/graphql',
+            /addComment.*variables.*MDExOlB1bGxSZXF1ZXN0NTc4ODgyNDUw.*super awesome comment.*/
+          )
+          .reply(200, { data: { clientMutationId: 'auniqueid' } })
 
-        const octokit = github.getOctokit('justafaketoken')
-        const add = updatePullRequestConflictLabel(octokit, github.context, pullRequest, expectedLabel, true, {
-          apply: true,
-          body: 'super awesome comment'
-        })
+        const octokit = getOctokit('justafaketoken')
+        const add = updatePullRequestConflictLabel(
+          octokit,
+          context,
+          pullRequest,
+          expectedLabel,
+          true,
+          {
+            apply: true,
+            body: 'super awesome comment'
+          }
+        )
 
         await expect(add).resolves.toBe(undefined)
       })
@@ -1565,31 +1817,56 @@ describe('queries', () => {
     it('does nothing when mergeable is unknown', async () => {
       const pullRequest = makePr('UNKNOWN')
 
-      const octokit = github.getOctokit('justafaketoken')
-      const mockFunction = jest.spyOn(octokit, 'graphql').mockImplementation(jest.fn())
-      await updatePullRequestConflictLabel(octokit, github.context, pullRequest, expectedLabel, false, {
-        apply: true,
-        body: 'super awesome comment'
-      })
+      const octokit = getOctokit('justafaketoken')
+      const mockFunction = jest
+        .spyOn(octokit, 'graphql')
+        .mockImplementation(jest.fn())
+      await updatePullRequestConflictLabel(
+        octokit,
+        context,
+        pullRequest,
+        expectedLabel,
+        false,
+        {
+          apply: true,
+          body: 'super awesome comment'
+        }
+      )
 
-      expect(mockFunction).not.toBeCalled()
+      expect(mockFunction).not.toHaveBeenCalled()
     })
   })
 
   describe('the whole sequence', () => {
     test('push event works', async () => {
-      github.context.eventName = 'push'
+      context.eventName = 'push'
 
       const scope = nock('https://api.github.com', {
         reqheaders: {
           authorization: 'token justafaketoken'
         }
       })
-        .post('/graphql')
+        .post('/graphql', (body) => body.query?.includes('labelName') === true)
         .reply(200, {
-          data: {repository: {labels: {edges: [{node: {id: 'MDU6TGFiZWwyNzYwMjE1ODI0', name: 'expected_label'}}]}}}
+          data: {
+            repository: {
+              labels: {
+                edges: [
+                  {
+                    node: {
+                      id: 'MDU6TGFiZWwyNzYwMjE1ODI0',
+                      name: 'expected_label'
+                    }
+                  }
+                ]
+              }
+            }
+          }
         })
-        .post('/graphql')
+        .post(
+          '/graphql',
+          (body) => body.query?.includes('pullRequests(first') === true
+        )
         .reply(200, {
           data: {
             repository: {
@@ -1656,7 +1933,10 @@ describe('queries', () => {
             }
           }
         })
-        .post('/graphql')
+        .post(
+          '/graphql',
+          (body) => body.query?.includes('pullRequests(first') === true
+        )
         .reply(200, {
           data: {
             repository: {
@@ -1725,11 +2005,9 @@ describe('queries', () => {
         })
         .post(
           '/graphql',
-          /addLabelsToLabelable.*variables.*MDU6TGFiZWwyNzYwMjE1ODI0.*MDExOlB1bGxSZXF1ZXN0NDQzNTg3NjI1.*/
+          (body) => body.query?.includes('addLabelsToLabelable') === true
         )
-        .reply(200, {data: {}})
-
-      const mock = jest.spyOn(core, 'setFailed').mockImplementation(jest.fn())
+        .reply(200, { data: {} })
 
       inputs['conflict_label_name'] = 'expected_label'
       inputs['github_token'] = 'justafaketoken'
@@ -1737,26 +2015,41 @@ describe('queries', () => {
       // inputs['max_retries'] = '1'
       inputs['wait_ms'] = '25'
 
-      expect(github.context.eventName).toBe('push')
+      expect(context.eventName).toBe('push')
 
       await run()
-
-      expect(scope.isDone())
-      expect(mock).not.toBeCalled()
+      expect(scope.pendingMocks()).toEqual([])
+      expect(mockSetFailed).not.toHaveBeenCalled()
     })
     test('push event works with comment', async () => {
-      github.context.eventName = 'push'
+      context.eventName = 'push'
 
       const scope = nock('https://api.github.com', {
         reqheaders: {
           authorization: 'token justafaketoken'
         }
       })
-        .post('/graphql')
+        .post('/graphql', (body) => body.query?.includes('labelName') === true)
         .reply(200, {
-          data: {repository: {labels: {edges: [{node: {id: 'MDU6TGFiZWwyNzYwMjE1ODI0', name: 'expected_label'}}]}}}
+          data: {
+            repository: {
+              labels: {
+                edges: [
+                  {
+                    node: {
+                      id: 'MDU6TGFiZWwyNzYwMjE1ODI0',
+                      name: 'expected_label'
+                    }
+                  }
+                ]
+              }
+            }
+          }
         })
-        .post('/graphql')
+        .post(
+          '/graphql',
+          (body) => body.query?.includes('pullRequests(first') === true
+        )
         .reply(200, {
           data: {
             repository: {
@@ -1823,7 +2116,10 @@ describe('queries', () => {
             }
           }
         })
-        .post('/graphql')
+        .post(
+          '/graphql',
+          (body) => body.query?.includes('pullRequests(first') === true
+        )
         .reply(200, {
           data: {
             repository: {
@@ -1894,11 +2190,12 @@ describe('queries', () => {
           '/graphql',
           /addLabelsToLabelable.*variables.*MDU6TGFiZWwyNzYwMjE1ODI0.*MDExOlB1bGxSZXF1ZXN0NDQzNTg3NjI1.*/
         )
-        .reply(200, {data: {}})
-        .post('/graphql', /addComment.*variables.*MDExOlB1bGxSZXF1ZXN0NDQzNTg3NjI1.*super awesome comment.*/)
-        .reply(200, {data: {clientMutationId: 'auniqueid'}})
-
-      const mock = jest.spyOn(core, 'setFailed').mockImplementation(jest.fn())
+        .reply(200, { data: {} })
+        .post(
+          '/graphql',
+          /addComment.*variables.*MDExOlB1bGxSZXF1ZXN0NDQzNTg3NjI1.*super awesome comment.*/
+        )
+        .reply(200, { data: { clientMutationId: 'auniqueid' } })
 
       inputs['conflict_label_name'] = 'expected_label'
       inputs['github_token'] = 'justafaketoken'
@@ -1906,27 +2203,45 @@ describe('queries', () => {
       // inputs['max_retries'] = '1'
       inputs['wait_ms'] = '25'
 
-      expect(github.context.eventName).toBe('push')
+      expect(context.eventName).toBe('push')
 
       await run()
 
-      expect(mock).not.toBeCalled()
+      expect(mockSetFailed).not.toHaveBeenCalled()
     })
 
     test('pull_request event works', async () => {
-      github.context.eventName = 'pull_request'
-      github.context.payload = mockPullRequestEvent as any
+      context.eventName = 'pull_request'
+      context.payload = mockPullRequestEvent as any
 
       const scope = nock('https://api.github.com', {
         reqheaders: {
           authorization: 'token justafaketoken'
         }
       })
-        .post('/graphql')
+        .post('/graphql', (body) => body.query?.includes('labelName') === true)
         .reply(200, {
-          data: {repository: {labels: {edges: [{node: {id: 'MDU6TGFiZWwyNzYwMjE1ODI0', name: 'expected_label'}}]}}}
+          data: {
+            repository: {
+              labels: {
+                edges: [
+                  {
+                    node: {
+                      id: 'MDU6TGFiZWwyNzYwMjE1ODI0',
+                      name: 'expected_label'
+                    }
+                  }
+                ]
+              }
+            }
+          }
         })
-        .post('/graphql', /\"variables\":{\"owner\":\"some-owner\",\"repo\":\"some-repo\",\"number\":2}/)
+        .post(
+          '/graphql',
+          (body) =>
+            body.query?.includes('pullRequest(number: $number)') === true &&
+            body.variables?.number === 2
+        )
         .reply(200, {
           data: {
             repository: {
@@ -1954,7 +2269,12 @@ describe('queries', () => {
             }
           }
         })
-        .post('/graphql', /\"variables\":{\"owner\":\"some-owner\",\"repo\":\"some-repo\",\"number\":2}/)
+        .post(
+          '/graphql',
+          (body) =>
+            body.query?.includes('pullRequest(number: $number)') === true &&
+            body.variables?.number === 2
+        )
         .reply(200, {
           data: {
             repository: {
@@ -1986,9 +2306,7 @@ describe('queries', () => {
           '/graphql',
           /addLabelsToLabelable.*variables.*MDU6TGFiZWwyNzYwMjE1ODI0.*MDExOlB1bGxSZXF1ZXN0NDQzNTg3NjI1.*/
         )
-        .reply(200, {data: {}})
-
-      const mock = jest.spyOn(core, 'setFailed').mockImplementation(jest.fn())
+        .reply(200, { data: {} })
 
       inputs['conflict_label_name'] = 'expected_label'
       inputs['github_token'] = 'justafaketoken'
@@ -1996,23 +2314,41 @@ describe('queries', () => {
       inputs['wait_ms'] = '25'
       await run()
 
-      expect(mock).not.toBeCalled()
+      expect(mockSetFailed).not.toHaveBeenCalled()
     })
 
     test('pull_request_target event works', async () => {
-      github.context.eventName = 'pull_request_target'
-      github.context.payload = mockPullRequestEvent as any
+      context.eventName = 'pull_request_target'
+      context.payload = mockPullRequestEvent as any
 
       const scope = nock('https://api.github.com', {
         reqheaders: {
           authorization: 'token justafaketoken'
         }
       })
-        .post('/graphql')
+        .post('/graphql', (body) => body.query?.includes('labelName') === true)
         .reply(200, {
-          data: {repository: {labels: {edges: [{node: {id: 'MDU6TGFiZWwyNzYwMjE1ODI0', name: 'expected_label'}}]}}}
+          data: {
+            repository: {
+              labels: {
+                edges: [
+                  {
+                    node: {
+                      id: 'MDU6TGFiZWwyNzYwMjE1ODI0',
+                      name: 'expected_label'
+                    }
+                  }
+                ]
+              }
+            }
+          }
         })
-        .post('/graphql', /\"variables\":{\"owner\":\"some-owner\",\"repo\":\"some-repo\",\"number\":2}/)
+        .post(
+          '/graphql',
+          (body) =>
+            body.query?.includes('pullRequest(number: $number)') === true &&
+            body.variables?.number === 2
+        )
         .reply(200, {
           data: {
             repository: {
@@ -2040,7 +2376,12 @@ describe('queries', () => {
             }
           }
         })
-        .post('/graphql', /\"variables\":{\"owner\":\"some-owner\",\"repo\":\"some-repo\",\"number\":2}/)
+        .post(
+          '/graphql',
+          (body) =>
+            body.query?.includes('pullRequest(number: $number)') === true &&
+            body.variables?.number === 2
+        )
         .reply(200, {
           data: {
             repository: {
@@ -2072,9 +2413,7 @@ describe('queries', () => {
           '/graphql',
           /addLabelsToLabelable.*variables.*MDU6TGFiZWwyNzYwMjE1ODI0.*MDExOlB1bGxSZXF1ZXN0NDQzNTg3NjI1.*/
         )
-        .reply(200, {data: {}})
-
-      const mock = jest.spyOn(core, 'setFailed').mockImplementation(jest.fn())
+        .reply(200, { data: {} })
 
       inputs['conflict_label_name'] = 'expected_label'
       inputs['github_token'] = 'justafaketoken'
@@ -2082,7 +2421,7 @@ describe('queries', () => {
       inputs['wait_ms'] = '25'
       await run()
 
-      expect(mock).not.toBeCalled()
+      expect(mockSetFailed).not.toHaveBeenCalled()
     })
 
     test('fails when label does not exist', async () => {
@@ -2093,10 +2432,21 @@ describe('queries', () => {
       })
         .post('/graphql')
         .reply(200, {
-          data: {repository: {labels: {edges: [{node: {id: 'MDU6TGFiZWwyNzYwMjE1ODI0', name: 'expected_label'}}]}}}
+          data: {
+            repository: {
+              labels: {
+                edges: [
+                  {
+                    node: {
+                      id: 'MDU6TGFiZWwyNzYwMjE1ODI0',
+                      name: 'expected_label'
+                    }
+                  }
+                ]
+              }
+            }
+          }
         })
-
-      const mock = jest.spyOn(core, 'setFailed').mockImplementation(jest.fn())
 
       inputs['conflict_label_name'] = 'this will not match'
       inputs['github_token'] = 'justafaketoken'
@@ -2104,7 +2454,11 @@ describe('queries', () => {
       inputs['wait_ms'] = '25'
       await run()
 
-      expect(mock).toBeCalledWith(new Error('The label "this will not match" was not found in your repository!'))
+      expect(mockSetFailed).toHaveBeenCalledWith(
+        new Error(
+          'The label "this will not match" was not found in your repository!'
+        )
+      )
     })
   })
 })

@@ -1,15 +1,19 @@
 import * as core from '@actions/core'
-import {Context} from '@actions/github/lib/context'
-import {GitHub} from '@actions/github/lib/utils'
-import {PullRequestEvent} from '@octokit/webhooks-definitions/schema' // eslint-disable-line import/no-unresolved
+import { Context, GitHub } from './github.js'
+import { PullRequestEvent } from '@octokit/webhooks-definitions/schema'
 
-import {IGitHubPRNode, IGitHubPullRequest} from './interfaces'
-import {wait} from './wait'
-import {getCommitChanges, getPullRequestChanges, getPullRequests, getPullRequest} from './queries'
-import {getPullrequestsWithoutMergeStatus} from './util'
+import { IGitHubPRNode, IGitHubPullRequest } from './interfaces.js'
+import { wait } from './wait.js'
+import {
+  getCommitChanges,
+  getPullRequestChanges,
+  getPullRequests,
+  getPullRequest
+} from './queries.js'
+import { getPullrequestsWithoutMergeStatus } from './util.js'
 
 export async function gatherPullRequest(
-  octokit: InstanceType<typeof GitHub>,
+  octokit: GitHub,
   context: Context,
   prEvent: PullRequestEvent,
   waitMs: number,
@@ -17,7 +21,8 @@ export async function gatherPullRequest(
 ): Promise<IGitHubPullRequest> {
   let tries = 0
   let pullRequest: IGitHubPullRequest
-  let uknownStatus: boolean = typeof prEvent.pull_request.mergeable !== 'boolean'
+  let uknownStatus: boolean =
+    typeof prEvent.pull_request.mergeable !== 'boolean'
 
   do {
     tries++
@@ -33,14 +38,16 @@ export async function gatherPullRequest(
   } while (uknownStatus && maxRetries >= tries)
 
   if (uknownStatus) {
-    throw new Error(`Could not determine mergeable status for: #${prEvent.number}`)
+    throw new Error(
+      `Could not determine mergeable status for: #${prEvent.number}`
+    )
   }
 
   return pullRequest
 }
 
 export async function gatherPullRequests(
-  octokit: InstanceType<typeof GitHub>,
+  octokit: GitHub,
   context: Context,
   waitMs: number,
   maxRetries: number
@@ -58,7 +65,8 @@ export async function gatherPullRequests(
     }
 
     pullRequests = await getPullRequests(octokit, context)
-    pullrequestsWithoutMergeStatus = getPullrequestsWithoutMergeStatus(pullRequests) // filter PRs with unknown mergeable status
+    pullrequestsWithoutMergeStatus =
+      getPullrequestsWithoutMergeStatus(pullRequests) // filter PRs with unknown mergeable status
   } while (pullrequestsWithoutMergeStatus.length > 0 && maxRetries >= tries)
 
   // after $maxRetries we give up, probably GitHub had some issues
@@ -66,7 +74,7 @@ export async function gatherPullRequests(
     // Only set failed so that we can proccess the rest of the pull requests the do have mergeable calculated
     core.setFailed(
       `Could not determine mergeable status for: #${pullrequestsWithoutMergeStatus
-        .map(pr => {
+        .map((pr) => {
           return pr.node.number
         })
         .join(', #')}`
@@ -77,12 +85,20 @@ export async function gatherPullRequests(
 }
 
 export const checkPullRequestForMergeChanges = async (
-  octokit: InstanceType<typeof GitHub>,
+  octokit: GitHub,
   context: Context,
   pullRequest: IGitHubPullRequest
 ): Promise<boolean> => {
-  const prChangedFiles = await getPullRequestChanges(octokit, context, pullRequest.number)
-  const mergeChangedFiles = await getCommitChanges(octokit, context, pullRequest.potentialMergeCommit.oid)
+  const prChangedFiles = await getPullRequestChanges(
+    octokit,
+    context,
+    pullRequest.number
+  )
+  const mergeChangedFiles = await getCommitChanges(
+    octokit,
+    context,
+    pullRequest.potentialMergeCommit.oid
+  )
 
   if (prChangedFiles.length !== mergeChangedFiles.length) {
     core.info(`#${pullRequest.number} has a difference in the number of files`)

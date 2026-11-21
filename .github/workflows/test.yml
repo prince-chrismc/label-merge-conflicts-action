@@ -2,7 +2,7 @@ name: CI
 on:
   pull_request:
   push:
-    branches: [ main ]
+    branches: [main]
   workflow_dispatch: {}
 
 permissions:
@@ -11,88 +11,29 @@ permissions:
   pull-requests: write
 
 jobs:
-  check:
-    runs-on: ubuntu-latest
-    outputs:
-      permitted: ${{ steps.check.outputs.permitted }}
-    steps:
-      - id: check
-        continue-on-error: true
-        uses: prince-chrismc/check-actor-permissions-action@v4
-        with:
-          permission: write
-
   ci:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
         with:
-          node-version: '24'
+          node-version-file: package.json
           cache: npm
-      - uses: actions/cache@v6
-        with:
-          path: node_modules
-          key: ${{ runner.os }}-${{ hashFiles('**/package-lock.json') }}
       - run: npm ci
-      - run: npm run all
-
-      - run: git add --update
-      - uses: Thalhammer/patch-generator-action@v3 # This will fail when stage is dirty
-
-  commit-linting:
-    needs: [check, ci]
-    if: always() && needs.ci.result != 'success' && needs.check.outputs.permitted == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
-        uses: actions/checkout@v7
-      - if: github.event_name == 'pull_request'
-        uses: actions/checkout@v7
+      - run: npm run format:check
+      - run: npm run lint
+      - run: npm run test
+      - uses: codecov/codecov-action@v7
         with:
-          token: ${{ github.token }}
-          ref: ${{ github.event.pull_request.head.ref }}
-
-      - uses: actions/download-artifact@v8
-        with:
-          name: git-patch
-          path: /tmp
-      - run: git apply /tmp/fix.diff
-
-      - uses: EndBug/add-and-commit@v11
-        with:
-          default_author: github_actions
-          message: linting and packing changes for ${{ github.sha }}
+          directory: coverage/
 
   e2e: # make sure the action works on a clean machine without building
-    needs: check
     runs-on: ubuntu-latest
-    if: needs.check.outputs.permitted == 'true'
     steps:
       - uses: actions/checkout@v7
       - uses: ./
         with:
-          conflict_comment: "" # No need to leave myself comments
-          conflict_label_name: "has conflict"
+          conflict_comment: '' # No need to leave myself comments
+          conflict_label_name: 'has conflict'
           github_token: ${{ github.token }}
           detect_merge_changes: true
-
-  coverage:
-    needs: ci
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
-        with:
-          node-version: '24'
-          cache: npm
-      - uses: actions/cache@v6
-        with:
-          path: node_modules
-          key: ${{ runner.os }}-${{ hashFiles('**/package-lock.json') }}
-      - run: npm ci
-      - run: npm test -- --coverage
-      - uses: codecov/codecov-action@v7
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          directory: coverage/

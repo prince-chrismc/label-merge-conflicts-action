@@ -1,11 +1,14 @@
 import * as core from '@actions/core'
-import {Context} from '@actions/github/lib/context'
-import {GitHub} from '@actions/github/lib/utils'
+import { Context, GitHub } from './github.js'
 
-import {IGitHubPullRequest, IGitHubLabelNode} from './interfaces'
-import {checkPullRequestForMergeChanges} from './pulls'
-import {addCommentToSubject, addLabelToLabelable, removeLabelFromLabelable} from './queries'
-import {isAlreadyLabeled} from './util'
+import { IGitHubPullRequest, IGitHubLabelNode } from './interfaces.js'
+import { checkPullRequestForMergeChanges } from './pulls.js'
+import {
+  addCommentToSubject,
+  addLabelToLabelable,
+  removeLabelFromLabelable
+} from './queries.js'
+import { isAlreadyLabeled } from './util.js'
 
 interface Labelable {
   labelId: string
@@ -13,11 +16,11 @@ interface Labelable {
 }
 
 async function applyLabelable(
-  octokit: InstanceType<typeof GitHub>,
+  octokit: GitHub,
   labelable: Labelable,
   hasLabel: boolean,
   pullRequestNumber: number,
-  comment: {apply: boolean; body?: string}
+  comment: { apply: boolean; body?: string }
 ) {
   if (hasLabel) {
     core.debug(`Skipping #${pullRequestNumber}, it is already labeled`)
@@ -28,22 +31,30 @@ async function applyLabelable(
   await addLabelToLabelable(octokit, labelable)
 
   if (comment.apply) {
-    await addCommentToSubject(octokit, labelable.labelableId, comment?.body as string)
+    await addCommentToSubject(
+      octokit,
+      labelable.labelableId,
+      comment?.body as string
+    )
   }
 }
 
 export async function updatePullRequestConflictLabel(
-  octokit: InstanceType<typeof GitHub>,
+  octokit: GitHub,
   context: Context,
   pullRequest: IGitHubPullRequest,
   conflictLabel: IGitHubLabelNode,
   detectMergeChanges: boolean,
-  comment: {apply: boolean; body?: string}
+  comment: { apply: boolean; body?: string }
 ): Promise<void> {
   const hasLabel = isAlreadyLabeled(pullRequest, conflictLabel)
-  const labelable: Labelable = {labelId: conflictLabel.node.id, labelableId: pullRequest.id}
+  const labelable: Labelable = {
+    labelId: conflictLabel.node.id,
+    labelableId: pullRequest.id
+  }
 
-  const writeBody = (author: string) => `${comment?.body?.replace('${author}', author)}`
+  const writeBody = (author: string) =>
+    `${comment?.body?.replace('${author}', author)}`
 
   switch (pullRequest.mergeable) {
     case 'CONFLICTING':
@@ -54,7 +65,10 @@ export async function updatePullRequestConflictLabel(
       break
 
     case 'MERGEABLE':
-      if (detectMergeChanges && (await checkPullRequestForMergeChanges(octokit, context, pullRequest))) {
+      if (
+        detectMergeChanges &&
+        (await checkPullRequestForMergeChanges(octokit, context, pullRequest))
+      ) {
         await applyLabelable(octokit, labelable, hasLabel, pullRequest.number, {
           apply: comment.apply,
           body: writeBody(pullRequest?.author?.login)
