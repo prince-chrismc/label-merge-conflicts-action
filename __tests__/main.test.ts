@@ -171,10 +171,6 @@ describe('queries', () => {
   beforeAll(() => {
     nock.disableNetConnect()
 
-    nock.emitter.on('no match', (req) => {
-      console.log('NOCK MISSED MATCHING THIS REQUEST:', req.path, req.options?.body || req.body);
-    });
-
     // Mock github context
     jest.spyOn(context, 'repo', 'get').mockImplementation(() => {
       return {
@@ -188,6 +184,8 @@ describe('queries', () => {
   })
 
   beforeEach(() => {
+    nock.cleanAll()
+
     // Reset inputs
     inputs = {}
     context.eventName = originalContext.eventName
@@ -1848,7 +1846,7 @@ describe('queries', () => {
           authorization: 'token justafaketoken'
         }
       })
-        .post('/graphql')
+        .post('/graphql', (body) => body.query?.includes('labelName') === true)
         .reply(200, {
           data: {
             repository: {
@@ -1865,7 +1863,10 @@ describe('queries', () => {
             }
           }
         })
-        .post('/graphql')
+        .post(
+          '/graphql',
+          (body) => body.query?.includes('pullRequests(first') === true
+        )
         .reply(200, {
           data: {
             repository: {
@@ -1932,7 +1933,10 @@ describe('queries', () => {
             }
           }
         })
-        .post('/graphql')
+        .post(
+          '/graphql',
+          (body) => body.query?.includes('pullRequests(first') === true
+        )
         .reply(200, {
           data: {
             repository: {
@@ -1999,39 +2003,12 @@ describe('queries', () => {
             }
           }
         })
-        // .post(
-        //   '/graphql',
-        //   /addLabelsToLabelable.*variables.*MDU6TGFiZWwyNzYwMjE1ODI0.*MDExOlB1bGxSZXF1ZXN0NDQzNTg3NjI1.*/
-        // )
-        // Replace your 4th .post() line with this:
-        // NEW INTERMEDIATE MOCK: Intercept the new lookup query
-        .post('/graphql', (body) => body.query && body.query.includes('labelName'))
-        .reply(200, {
-          data: {
-            repository: {
-              labels: {
-                edges: [
-                  {
-                    node: {
-                      id: 'MDU6TGFiZWwyNzYwMjE1ODI0', // The expected label ID
-                      name: 'expected_label'
-                    }
-                  }
-                ]
-              }
-            }
-          }
-        })
-
-        // FINAL MOCK: Your original mutation mock (loosened slightly for safety)
-        // .post('/graphql', (body) => body.query && body.query.includes('addLabelsToLabelable'))
-        // .reply(200, { data: {} })
-        .post('/graphql', (body) => {
-          console.log('REAL OUTBOUND GRAPHQL BODY:', JSON.stringify(body, null, 2));
-          return true; // Match ANY POST request to /graphql for this 4th slot
-        })
+        .post(
+          '/graphql',
+          (body) => body.query?.includes('addLabelsToLabelable') === true
+        )
         .reply(200, { data: {} })
-        
+
       inputs['conflict_label_name'] = 'expected_label'
       inputs['github_token'] = 'justafaketoken'
       inputs['comment_template'] = ''
@@ -2041,13 +2018,7 @@ describe('queries', () => {
       expect(context.eventName).toBe('push')
 
       await run()
-      console.log('Pending mocks:', scope.pendingMocks());
-      console.log('SetFailed calls:', mockSetFailed.mock.calls);
-      console.log('Error logs:', mockError.mock.calls);
-      console.log('Warning logs:', mockWarning.mock.calls);
-      console.log('Debug logs:', mockDebug.mock.calls);
-      console.log('Info logs:', mockInfo.mock.calls);
-      expect(scope.isDone()).toBe(true)
+      expect(scope.pendingMocks()).toEqual([])
       expect(mockSetFailed).not.toHaveBeenCalled()
     })
     test('push event works with comment', async () => {
@@ -2058,7 +2029,7 @@ describe('queries', () => {
           authorization: 'token justafaketoken'
         }
       })
-        .post('/graphql')
+        .post('/graphql', (body) => body.query?.includes('labelName') === true)
         .reply(200, {
           data: {
             repository: {
@@ -2075,7 +2046,10 @@ describe('queries', () => {
             }
           }
         })
-        .post('/graphql')
+        .post(
+          '/graphql',
+          (body) => body.query?.includes('pullRequests(first') === true
+        )
         .reply(200, {
           data: {
             repository: {
@@ -2142,7 +2116,10 @@ describe('queries', () => {
             }
           }
         })
-        .post('/graphql')
+        .post(
+          '/graphql',
+          (body) => body.query?.includes('pullRequests(first') === true
+        )
         .reply(200, {
           data: {
             repository: {
@@ -2242,7 +2219,7 @@ describe('queries', () => {
           authorization: 'token justafaketoken'
         }
       })
-        .post('/graphql')
+        .post('/graphql', (body) => body.query?.includes('labelName') === true)
         .reply(200, {
           data: {
             repository: {
@@ -2261,7 +2238,9 @@ describe('queries', () => {
         })
         .post(
           '/graphql',
-          /\"variables\":{\"owner\":\"some-owner\",\"repo\":\"some-repo\",\"number\":2}/
+          (body) =>
+            body.query?.includes('pullRequest(number: $number)') === true &&
+            body.variables?.number === 2
         )
         .reply(200, {
           data: {
@@ -2292,7 +2271,9 @@ describe('queries', () => {
         })
         .post(
           '/graphql',
-          /\"variables\":{\"owner\":\"some-owner\",\"repo\":\"some-repo\",\"number\":2}/
+          (body) =>
+            body.query?.includes('pullRequest(number: $number)') === true &&
+            body.variables?.number === 2
         )
         .reply(200, {
           data: {
@@ -2345,7 +2326,7 @@ describe('queries', () => {
           authorization: 'token justafaketoken'
         }
       })
-        .post('/graphql')
+        .post('/graphql', (body) => body.query?.includes('labelName') === true)
         .reply(200, {
           data: {
             repository: {
@@ -2364,7 +2345,9 @@ describe('queries', () => {
         })
         .post(
           '/graphql',
-          /\"variables\":{\"owner\":\"some-owner\",\"repo\":\"some-repo\",\"number\":2}/
+          (body) =>
+            body.query?.includes('pullRequest(number: $number)') === true &&
+            body.variables?.number === 2
         )
         .reply(200, {
           data: {
@@ -2395,7 +2378,9 @@ describe('queries', () => {
         })
         .post(
           '/graphql',
-          /\"variables\":{\"owner\":\"some-owner\",\"repo\":\"some-repo\",\"number\":2}/
+          (body) =>
+            body.query?.includes('pullRequest(number: $number)') === true &&
+            body.variables?.number === 2
         )
         .reply(200, {
           data: {
